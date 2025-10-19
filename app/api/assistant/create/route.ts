@@ -43,19 +43,12 @@ export async function POST() {
         function: {
           name: "search_airtable_client",
           description:
-            "Search Motta's client database. Sequential workflow: Last Name → First Name → Organization. Returns Primary Email, Client Number, Karbon ID.",
+            "Search Motta's client database by last name, first name, or organization. Returns email, client number, Karbon ID.",
           parameters: {
             type: "object",
             properties: {
-              searchTerm: {
-                type: "string",
-                description: "Last name, first name, or organization",
-              },
-              searchType: {
-                type: "string",
-                description: "Search field: lastName, firstName, or organization",
-                enum: ["lastName", "firstName", "organization"],
-              },
+              searchTerm: { type: "string", description: "Last name, first name, or organization" },
+              searchType: { type: "string", enum: ["lastName", "firstName", "organization"] },
             },
             required: ["searchTerm"],
           },
@@ -65,23 +58,13 @@ export async function POST() {
         type: "function",
         function: {
           name: "get_meeting_debriefs",
-          description:
-            "Get all meeting history for a client using Client Number. Returns comprehensive relationship timeline.",
+          description: "Get meeting history for a client using Client Number.",
           parameters: {
             type: "object",
             properties: {
-              clientNumber: {
-                type: "string",
-                description: "Client Number from Airtable",
-              },
-              clientName: {
-                type: "string",
-                description: "Optional: Client name for fallback",
-              },
-              clientEmail: {
-                type: "string",
-                description: "Optional: Email for fallback",
-              },
+              clientNumber: { type: "string", description: "Client Number from Airtable" },
+              clientName: { type: "string" },
+              clientEmail: { type: "string" },
             },
             required: ["clientNumber"],
           },
@@ -91,20 +74,12 @@ export async function POST() {
         type: "function",
         function: {
           name: "search_karbon_by_id",
-          description:
-            "Get Karbon data using Client ID/Key from Airtable. Searches Contacts (individuals) or Organizations (entities). Returns work items and practice context.",
+          description: "Get Karbon data using Client ID from Airtable. Returns work items and context.",
           parameters: {
             type: "object",
             properties: {
-              karbonClientId: {
-                type: "string",
-                description: "Karbon Client ID or Key from Airtable",
-              },
-              clientType: {
-                type: "string",
-                description: "individual (Contacts) or organization (Organizations)",
-                enum: ["individual", "organization"],
-              },
+              karbonClientId: { type: "string", description: "Karbon Client ID from Airtable" },
+              clientType: { type: "string", enum: ["individual", "organization"] },
             },
             required: ["karbonClientId", "clientType"],
           },
@@ -119,19 +94,16 @@ export async function POST() {
           function: {
             name: "web_search",
             description:
-              "Search the web for current information. Use for tax law updates, IRS guidance, regulations, industry news, or any information not in client databases.",
+              "REQUIRED for current tax info: rates, limits, IRS guidance, new laws, forms. Search IRS.gov, tax courts, official sources. Use BEFORE calculations/advice on current-year topics.",
             parameters: {
               type: "object",
               properties: {
                 query: {
                   type: "string",
-                  description: "Search query (e.g., 'IRS 2024 tax brackets', 'Section 179 deduction limits')",
+                  description:
+                    "Search query. Examples: '2024 standard deduction', 'IRC 199A qualified business income', 'IRS Notice 2024-XX'",
                 },
-                numResults: {
-                  type: "number",
-                  description: "Number of results to return (default: 5, max: 10)",
-                  default: 5,
-                },
+                numResults: { type: "number", default: 5, description: "Number of results (1-10)" },
               },
               required: ["query"],
             },
@@ -142,13 +114,13 @@ export async function POST() {
           function: {
             name: "web_scrape",
             description:
-              "Extract content from a specific URL. Use to read articles, IRS pages, tax resources, or documentation.",
+              "Extract full content from specific URLs (IRS publications, tax court rulings, official guidance). Use after web_search to get complete details.",
             parameters: {
               type: "object",
               properties: {
                 url: {
                   type: "string",
-                  description: "URL to scrape (e.g., 'https://www.irs.gov/newsroom/...')",
+                  description: "Full URL to scrape (e.g., https://www.irs.gov/pub/irs-pdf/p334.pdf)",
                 },
               },
               required: ["url"],
@@ -163,22 +135,15 @@ export async function POST() {
         type: "function",
         function: {
           name: "call_zapier_mcp",
-          description:
-            "Execute Zapier workflows to interact with 6000+ apps including Gmail, Slack, Google Calendar, QuickBooks, HubSpot, Google Drive, and more. Use this to send emails, search messages, create calendar events, retrieve CRM data, upload files, and automate cross-platform workflows. This is your gateway to all external business platforms.",
+          description: "Execute Zapier workflows for Gmail, Slack, Calendar, QuickBooks, HubSpot, Drive, etc.",
           parameters: {
             type: "object",
             properties: {
               zapierAction: {
                 type: "string",
-                description:
-                  "The Zapier MCP action to execute. Examples: 'gmail_send_email', 'gmail_search_emails', 'gcal_create_event', 'gcal_find_events', 'slack_send_message', 'qb_get_customer', 'gdrive_search_files', 'hubspot_get_contact'",
+                description: "Zapier action (e.g., 'gmail_send_email', 'gcal_create_event')",
               },
-              zapierParams: {
-                type: "object",
-                description:
-                  "Parameters for the Zapier action. Structure varies by action. Examples: {to: 'email@example.com', subject: 'Hello', body: 'Message'} for gmail_send_email, {query: 'from:john@example.com'} for gmail_search_emails, {summary: 'Meeting', start: '2024-01-15T10:00:00', end: '2024-01-15T11:00:00'} for gcal_create_event",
-                additionalProperties: true,
-              },
+              zapierParams: { type: "object", additionalProperties: true },
             },
             required: ["zapierAction"],
           },
@@ -192,19 +157,12 @@ export async function POST() {
           type: "function",
           function: {
             name: "extract_pdf_text",
-            description:
-              "Extract text, tables, and structured content from PDF documents. Use this to analyze tax documents, financial statements, contracts, or any PDF that needs text extraction. Returns extracted text and table data in JSON format.",
+            description: "Extract text and tables from PDFs. Returns JSON with extracted content.",
             parameters: {
               type: "object",
               properties: {
-                fileUrl: {
-                  type: "string",
-                  description: "URL or base64-encoded PDF file to extract text from",
-                },
-                fileName: {
-                  type: "string",
-                  description: "Name of the PDF file (e.g., 'tax-return-2024.pdf')",
-                },
+                fileUrl: { type: "string" },
+                fileName: { type: "string" },
               },
               required: ["fileUrl", "fileName"],
             },
@@ -214,25 +172,13 @@ export async function POST() {
           type: "function",
           function: {
             name: "compress_pdf",
-            description:
-              "Compress PDF files to reduce file size for easier sharing and storage. Useful for large tax documents, scanned files, or reports. Choose compression level based on quality needs.",
+            description: "Compress PDF to reduce file size. Choose LOW/MEDIUM/HIGH compression.",
             parameters: {
               type: "object",
               properties: {
-                fileUrl: {
-                  type: "string",
-                  description: "URL or base64-encoded PDF file to compress",
-                },
-                fileName: {
-                  type: "string",
-                  description: "Name of the PDF file",
-                },
-                compressionLevel: {
-                  type: "string",
-                  description: "Compression level: LOW (best quality), MEDIUM (balanced), HIGH (smallest size)",
-                  enum: ["LOW", "MEDIUM", "HIGH"],
-                  default: "MEDIUM",
-                },
+                fileUrl: { type: "string" },
+                fileName: { type: "string" },
+                compressionLevel: { type: "string", enum: ["LOW", "MEDIUM", "HIGH"], default: "MEDIUM" },
               },
               required: ["fileUrl", "fileName"],
             },
@@ -242,34 +188,22 @@ export async function POST() {
           type: "function",
           function: {
             name: "combine_pdfs",
-            description:
-              "Merge multiple PDF files into a single document. Useful for combining tax forms, supporting documents, or creating comprehensive client packages.",
+            description: "Merge multiple PDFs into one document.",
             parameters: {
               type: "object",
               properties: {
                 files: {
                   type: "array",
-                  description: "Array of PDF files to combine",
                   items: {
                     type: "object",
                     properties: {
-                      fileUrl: {
-                        type: "string",
-                        description: "URL or base64-encoded PDF file",
-                      },
-                      fileName: {
-                        type: "string",
-                        description: "Name of the PDF file",
-                      },
+                      fileUrl: { type: "string" },
+                      fileName: { type: "string" },
                     },
                     required: ["fileUrl", "fileName"],
                   },
                 },
-                outputFileName: {
-                  type: "string",
-                  description: "Name for the combined PDF file",
-                  default: "combined.pdf",
-                },
+                outputFileName: { type: "string", default: "combined.pdf" },
               },
               required: ["files"],
             },
@@ -279,24 +213,13 @@ export async function POST() {
           type: "function",
           function: {
             name: "convert_pdf",
-            description:
-              "Convert PDF files to other formats (Word, Excel, PowerPoint, images). Useful for editing tax documents, extracting data to spreadsheets, or creating presentations.",
+            description: "Convert PDF to Word, Excel, PowerPoint, or images.",
             parameters: {
               type: "object",
               properties: {
-                fileUrl: {
-                  type: "string",
-                  description: "URL or base64-encoded PDF file to convert",
-                },
-                fileName: {
-                  type: "string",
-                  description: "Name of the PDF file",
-                },
-                targetFormat: {
-                  type: "string",
-                  description: "Target format for conversion",
-                  enum: ["docx", "xlsx", "pptx", "jpeg", "png"],
-                },
+                fileUrl: { type: "string" },
+                fileName: { type: "string" },
+                targetFormat: { type: "string", enum: ["docx", "xlsx", "pptx", "jpeg", "png"] },
               },
               required: ["fileUrl", "fileName", "targetFormat"],
             },
@@ -318,8 +241,9 @@ export async function POST() {
       body: JSON.stringify({
         name: "ALFRED AI",
         instructions: ALFRED_INSTRUCTIONS,
-        model: "gpt-4o",
+        model: "gpt-4o-mini", // Use GPT-4o-mini for better cost efficiency while maintaining quality
         tools,
+        temperature: 0.7, // Added temperature for more consistent responses
       }),
     })
 

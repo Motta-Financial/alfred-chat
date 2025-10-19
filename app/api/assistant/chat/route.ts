@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server"
+import { truncateResponse, estimateTokens } from "../constants"
 
 export async function POST(req: Request) {
   console.log("[v0] Starting assistant chat...")
@@ -64,6 +65,24 @@ export async function POST(req: Request) {
     const encoder = new TextEncoder()
     const stream = new ReadableStream({
       async start(controller) {
+        let isClosed = false
+        let totalOutputTokens = 0
+        let functionCallCount = 0
+
+        const safeClose = () => {
+          if (!isClosed) {
+            isClosed = true
+            console.log("[v0] Token usage summary:", {
+              inputTokens: estimateTokens(message),
+              outputTokens: totalOutputTokens,
+              totalTokens: estimateTokens(message) + totalOutputTokens,
+              functionCalls: functionCallCount,
+            })
+            controller.close()
+            console.log("[v0] Stream closed")
+          }
+        }
+
         try {
           async function handleFunctionCalls(streamReader: ReadableStreamDefaultReader<Uint8Array>, isInitial = true) {
             const decoder = new TextDecoder()
@@ -71,6 +90,11 @@ export async function POST(req: Request) {
             let currentRunId = ""
 
             while (true) {
+              if (isClosed) {
+                console.log("[v0] Stream already closed, stopping read loop")
+                break
+              }
+
               let readResult
               try {
                 readResult = await streamReader.read()
@@ -86,7 +110,7 @@ export async function POST(req: Request) {
               const { done, value } = readResult
 
               if (done) {
-                console.log("[v0] Stream complete")
+                console.log("[v0] Stream complete, total length:", buffer.length)
                 break
               }
 
@@ -111,14 +135,17 @@ export async function POST(req: Request) {
                       if (["failed", "cancelled", "expired"].includes(parsed.status)) {
                         const errorMsg =
                           parsed.last_error?.message || "Request failed. Please try again with a simpler query."
-                        controller.enqueue(
-                          encoder.encode(
-                            `data: ${JSON.stringify({
-                              content: `I apologize, but I encountered an error: ${errorMsg}`,
-                            })}\n\n`,
-                          ),
-                        )
-                        controller.close()
+                        console.error("[v0] Run failed:", errorMsg)
+
+                        if (!isClosed) {
+                          controller.enqueue(
+                            encoder.encode(
+                              `data: ${JSON.stringify({
+                                content: `I apologize, but I encountered an error: ${errorMsg}`,
+                              })}\n\n`,
+                            ),
+                          )
+                        }
                         return
                       }
                     }
@@ -126,6 +153,8 @@ export async function POST(req: Request) {
                     if (parsed.object === "thread.run" && parsed.status === "requires_action") {
                       const toolCalls = parsed.required_action?.submit_tool_outputs?.tool_calls || []
                       const toolOutputs = []
+
+                      functionCallCount += toolCalls.length
 
                       for (const toolCall of toolCalls) {
                         console.log("[v0] Calling:", toolCall.function.name)
@@ -150,15 +179,15 @@ export async function POST(req: Request) {
 
                           const endpoint = endpoints[toolCall.function.name]
                           if (endpoint) {
-                            const controller = new AbortController()
-                            const timeoutId = setTimeout(() => controller.abort(), 30000) // 30 second timeout
+                            const abortController = new AbortController()
+                            const timeoutId = setTimeout(() => abortController.abort(), 30000)
 
                             try {
                               const response = await fetch(`${baseUrl}${endpoint}`, {
                                 method: "POST",
                                 headers: { "Content-Type": "application/json" },
                                 body: JSON.stringify(functionArgs),
-                                signal: controller.signal,
+                                signal: abortController.signal,
                               })
 
                               clearTimeout(timeoutId)
@@ -179,7 +208,12 @@ export async function POST(req: Request) {
                                   details: responseData.details || responseData,
                                 })
                               } else {
-                                functionResult = JSON.stringify(responseData)
+                                const truncatedData = truncateResponse(responseData)
+                                functionResult = JSON.stringify(truncatedData)
+
+                                const responseTokens = estimateTokens(functionResult)
+                                console.log(`[v0] Function ${toolCall.function.name} response tokens:`, responseTokens)
+                                totalOutputTokens += responseTokens
                               }
                             } catch (fetchError) {
                               clearTimeout(timeoutId)
@@ -241,7 +275,14 @@ export async function POST(req: Request) {
                     if (parsed.object === "thread.message.delta") {
                       const delta = parsed.delta?.content?.[0]
                       if (delta?.type === "text" && delta.text?.value) {
-                        controller.enqueue(encoder.encode(`data: ${JSON.stringify({ content: delta.text.value })}\n\n`))
+                        const deltaTokens = estimateTokens(delta.text.value)
+                        totalOutputTokens += deltaTokens
+
+                        if (!isClosed) {
+                          controller.enqueue(
+                            encoder.encode(`data: ${JSON.stringify({ content: delta.text.value })}\n\n`),
+                          )
+                        }
                       }
                     }
                   } catch (e) {
@@ -258,10 +299,12 @@ export async function POST(req: Request) {
 
           await handleFunctionCalls(reader, true)
 
-          controller.close()
+          safeClose()
         } catch (error) {
           console.error("[v0] Stream error:", error)
-          controller.error(error)
+          if (!isClosed) {
+            controller.error(error)
+          }
         }
       },
     })

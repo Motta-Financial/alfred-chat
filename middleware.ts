@@ -1,14 +1,14 @@
-import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server"
+import { NextResponse } from "next/server"
+import type { NextRequest } from "next/server"
 
-// Define public routes that don't require authentication
-const isPublicRoute = createRouteMatcher(["/sign-in(.*)", "/sign-up(.*)", "/api/webhook(.*)"])
+// Authentication is handled by DomainGuard component on the client side
+export function middleware(request: NextRequest) {
+  console.log("[v0] Middleware processing:", request.nextUrl.pathname)
 
-export default clerkMiddleware(async (auth, request) => {
-  // Protect all routes except public ones
-  if (!isPublicRoute(request)) {
-    await auth.protect()
-  }
-})
+  // Allow all requests to pass through
+  // Client-side DomainGuard will handle authentication and domain checks
+  return NextResponse.next()
+}
 
 export const config = {
   matcher: [
