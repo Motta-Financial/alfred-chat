@@ -15,12 +15,23 @@ export async function POST() {
 
     const braveApiKey = process.env.BRAVE_SEARCH_API_KEY
     console.log("[v0] BRAVE_SEARCH_API_KEY exists:", !!braveApiKey)
-    console.log("[v0] BRAVE_SEARCH_API_KEY length:", braveApiKey?.length || 0)
-    console.log("[v0] BRAVE_SEARCH_API_KEY first 10 chars:", braveApiKey?.substring(0, 10) || "N/A")
 
-    // Check if the key is actually set and not empty
     const webSearchEnabled = !!(braveApiKey && braveApiKey.trim().length > 0)
     console.log("[v0] Web search enabled:", webSearchEnabled)
+
+    const zapierApiKey = process.env.ZAPIER_MCP_API_KEY
+    const zapierEnabled = !!(zapierApiKey && zapierApiKey.trim().length > 0)
+    console.log("[v0] Zapier MCP enabled:", zapierEnabled)
+
+    const adobeClientId = process.env.ADOBE_PDF_SERVICES_CLIENT_ID
+    const adobeClientSecret = process.env.ADOBE_PDF_SERVICES_CLIENT_SECRET
+    const adobeEnabled = !!(
+      adobeClientId &&
+      adobeClientSecret &&
+      adobeClientId.trim().length > 0 &&
+      adobeClientSecret.trim().length > 0
+    )
+    console.log("[v0] Adobe PDF Services enabled:", adobeEnabled)
 
     console.log("[v0] Creating assistant with available capabilities...")
 
@@ -101,49 +112,198 @@ export async function POST() {
       },
     ]
 
-    tools.push(
-      {
+    if (webSearchEnabled) {
+      tools.push(
+        {
+          type: "function",
+          function: {
+            name: "web_search",
+            description:
+              "Search the web for current information. Use for tax law updates, IRS guidance, regulations, industry news, or any information not in client databases.",
+            parameters: {
+              type: "object",
+              properties: {
+                query: {
+                  type: "string",
+                  description: "Search query (e.g., 'IRS 2024 tax brackets', 'Section 179 deduction limits')",
+                },
+                numResults: {
+                  type: "number",
+                  description: "Number of results to return (default: 5, max: 10)",
+                  default: 5,
+                },
+              },
+              required: ["query"],
+            },
+          },
+        },
+        {
+          type: "function",
+          function: {
+            name: "web_scrape",
+            description:
+              "Extract content from a specific URL. Use to read articles, IRS pages, tax resources, or documentation.",
+            parameters: {
+              type: "object",
+              properties: {
+                url: {
+                  type: "string",
+                  description: "URL to scrape (e.g., 'https://www.irs.gov/newsroom/...')",
+                },
+              },
+              required: ["url"],
+            },
+          },
+        },
+      )
+    }
+
+    if (zapierEnabled) {
+      tools.push({
         type: "function",
         function: {
-          name: "web_search",
+          name: "call_zapier_mcp",
           description:
-            "Search the web for current information. Use for tax law updates, IRS guidance, regulations, industry news, or any information not in client databases. Requires BRAVE_SEARCH_API_KEY to be configured.",
+            "Execute Zapier workflows to interact with 6000+ apps including Gmail, Slack, Google Calendar, QuickBooks, HubSpot, Google Drive, and more. Use this to send emails, search messages, create calendar events, retrieve CRM data, upload files, and automate cross-platform workflows. This is your gateway to all external business platforms.",
           parameters: {
             type: "object",
             properties: {
-              query: {
+              zapierAction: {
                 type: "string",
-                description: "Search query (e.g., 'IRS 2024 tax brackets', 'Section 179 deduction limits')",
+                description:
+                  "The Zapier MCP action to execute. Examples: 'gmail_send_email', 'gmail_search_emails', 'gcal_create_event', 'gcal_find_events', 'slack_send_message', 'qb_get_customer', 'gdrive_search_files', 'hubspot_get_contact'",
               },
-              numResults: {
-                type: "number",
-                description: "Number of results to return (default: 5, max: 10)",
-                default: 5,
+              zapierParams: {
+                type: "object",
+                description:
+                  "Parameters for the Zapier action. Structure varies by action. Examples: {to: 'email@example.com', subject: 'Hello', body: 'Message'} for gmail_send_email, {query: 'from:john@example.com'} for gmail_search_emails, {summary: 'Meeting', start: '2024-01-15T10:00:00', end: '2024-01-15T11:00:00'} for gcal_create_event",
+                additionalProperties: true,
               },
             },
-            required: ["query"],
+            required: ["zapierAction"],
           },
         },
-      },
-      {
-        type: "function",
-        function: {
-          name: "web_scrape",
-          description:
-            "Extract content from a specific URL. Use to read articles, IRS pages, tax resources, or documentation. Requires BRAVE_SEARCH_API_KEY to be configured.",
-          parameters: {
-            type: "object",
-            properties: {
-              url: {
-                type: "string",
-                description: "URL to scrape (e.g., 'https://www.irs.gov/newsroom/...')",
+      })
+    }
+
+    if (adobeEnabled) {
+      tools.push(
+        {
+          type: "function",
+          function: {
+            name: "extract_pdf_text",
+            description:
+              "Extract text, tables, and structured content from PDF documents. Use this to analyze tax documents, financial statements, contracts, or any PDF that needs text extraction. Returns extracted text and table data in JSON format.",
+            parameters: {
+              type: "object",
+              properties: {
+                fileUrl: {
+                  type: "string",
+                  description: "URL or base64-encoded PDF file to extract text from",
+                },
+                fileName: {
+                  type: "string",
+                  description: "Name of the PDF file (e.g., 'tax-return-2024.pdf')",
+                },
               },
+              required: ["fileUrl", "fileName"],
             },
-            required: ["url"],
           },
         },
-      },
-    )
+        {
+          type: "function",
+          function: {
+            name: "compress_pdf",
+            description:
+              "Compress PDF files to reduce file size for easier sharing and storage. Useful for large tax documents, scanned files, or reports. Choose compression level based on quality needs.",
+            parameters: {
+              type: "object",
+              properties: {
+                fileUrl: {
+                  type: "string",
+                  description: "URL or base64-encoded PDF file to compress",
+                },
+                fileName: {
+                  type: "string",
+                  description: "Name of the PDF file",
+                },
+                compressionLevel: {
+                  type: "string",
+                  description: "Compression level: LOW (best quality), MEDIUM (balanced), HIGH (smallest size)",
+                  enum: ["LOW", "MEDIUM", "HIGH"],
+                  default: "MEDIUM",
+                },
+              },
+              required: ["fileUrl", "fileName"],
+            },
+          },
+        },
+        {
+          type: "function",
+          function: {
+            name: "combine_pdfs",
+            description:
+              "Merge multiple PDF files into a single document. Useful for combining tax forms, supporting documents, or creating comprehensive client packages.",
+            parameters: {
+              type: "object",
+              properties: {
+                files: {
+                  type: "array",
+                  description: "Array of PDF files to combine",
+                  items: {
+                    type: "object",
+                    properties: {
+                      fileUrl: {
+                        type: "string",
+                        description: "URL or base64-encoded PDF file",
+                      },
+                      fileName: {
+                        type: "string",
+                        description: "Name of the PDF file",
+                      },
+                    },
+                    required: ["fileUrl", "fileName"],
+                  },
+                },
+                outputFileName: {
+                  type: "string",
+                  description: "Name for the combined PDF file",
+                  default: "combined.pdf",
+                },
+              },
+              required: ["files"],
+            },
+          },
+        },
+        {
+          type: "function",
+          function: {
+            name: "convert_pdf",
+            description:
+              "Convert PDF files to other formats (Word, Excel, PowerPoint, images). Useful for editing tax documents, extracting data to spreadsheets, or creating presentations.",
+            parameters: {
+              type: "object",
+              properties: {
+                fileUrl: {
+                  type: "string",
+                  description: "URL or base64-encoded PDF file to convert",
+                },
+                fileName: {
+                  type: "string",
+                  description: "Name of the PDF file",
+                },
+                targetFormat: {
+                  type: "string",
+                  description: "Target format for conversion",
+                  enum: ["docx", "xlsx", "pptx", "jpeg", "png"],
+                },
+              },
+              required: ["fileUrl", "fileName", "targetFormat"],
+            },
+          },
+        },
+      )
+    }
 
     console.log("[v0] Total tools configured:", tools.length)
     console.log("[v0] Tool names:", tools.map((t) => (t.type === "function" ? t.function.name : t.type)).join(", "))

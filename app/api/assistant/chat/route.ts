@@ -141,6 +141,11 @@ export async function POST(req: Request) {
                             search_karbon_by_id: "/api/karbon/search-by-id",
                             web_search: "/api/web/search",
                             web_scrape: "/api/web/scrape",
+                            call_zapier_mcp: "/api/zapier/mcp",
+                            extract_pdf_text: "/api/adobe/extract",
+                            compress_pdf: "/api/adobe/compress",
+                            combine_pdfs: "/api/adobe/combine",
+                            convert_pdf: "/api/adobe/convert",
                           }
 
                           const endpoint = endpoints[toolCall.function.name]
