@@ -92,21 +92,17 @@ export async function POST(req: Request) {
       const html = await response.text()
       console.log("[v0] HTML content length:", html.length)
 
+      // Basic HTML cleaning - remove scripts, styles, and extract text
       let cleanText = html
         .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, "")
         .replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, "")
-        .replace(/<nav\b[^<]*(?:(?!<\/nav>)<[^<]*)*<\/nav>/gi, "") // Remove navigation
-        .replace(/<header\b[^<]*(?:(?!<\/header>)<[^<]*)*<\/header>/gi, "") // Remove headers
-        .replace(/<footer\b[^<]*(?:(?!<\/footer>)<[^<]*)*<\/footer>/gi, "") // Remove footers
-        .replace(/<aside\b[^<]*(?:(?!<\/aside>)<[^<]*)*<\/aside>/gi, "") // Remove sidebars
         .replace(/<[^>]+>/g, " ")
         .replace(/\s+/g, " ")
-        .replace(/\n\s*\n/g, "\n") // Remove multiple blank lines
         .trim()
 
-      const maxLength = 15000
-      if (cleanText.length > maxLength) {
-        cleanText = cleanText.substring(0, maxLength) + "\n\n[Content truncated for token optimization]"
+      // Limit to first 10000 characters to avoid token limits
+      if (cleanText.length > 10000) {
+        cleanText = cleanText.substring(0, 10000) + "... (content truncated)"
       }
 
       console.log("[v0] Clean text length:", cleanText.length)
@@ -116,8 +112,6 @@ export async function POST(req: Request) {
         url,
         content: cleanText,
         length: cleanText.length,
-        truncated: cleanText.length >= maxLength,
-        source: new URL(url).hostname,
       })
     } catch (fetchError) {
       console.error("[v0] Fetch error:", fetchError)

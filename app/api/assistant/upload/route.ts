@@ -12,14 +12,14 @@ export async function POST(request: NextRequest) {
     const formData = await request.formData()
     const file = formData.get("file") as File
     const assistantId = formData.get("assistantId") as string
+    const vectorStoreId = formData.get("vectorStoreId") as string
 
-    if (!file || !assistantId) {
-      return NextResponse.json({ error: "File and assistantId required" }, { status: 400 })
+    if (!file || !assistantId || !vectorStoreId) {
+      return NextResponse.json({ error: "File, assistantId, and vectorStoreId required" }, { status: 400 })
     }
 
     console.log("[v0] Uploading file:", file.name, "Size:", file.size)
 
-    // Upload file to OpenAI
     const uploadFormData = new FormData()
     uploadFormData.append("file", file)
     uploadFormData.append("purpose", "assistants")
@@ -41,8 +41,7 @@ export async function POST(request: NextRequest) {
     const uploadedFile = await uploadResponse.json()
     console.log("[v0] File uploaded:", uploadedFile.id)
 
-    // Attach file to assistant
-    const attachResponse = await fetch(`https://api.openai.com/v1/assistants/${assistantId}`, {
+    const vectorStoreFileResponse = await fetch(`https://api.openai.com/v1/vector_stores/${vectorStoreId}/files`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -50,26 +49,24 @@ export async function POST(request: NextRequest) {
         "OpenAI-Beta": "assistants=v2",
       },
       body: JSON.stringify({
-        tool_resources: {
-          file_search: {
-            vector_store_ids: [],
-          },
-        },
-        file_ids: [uploadedFile.id],
+        file_id: uploadedFile.id,
       }),
     })
 
-    if (!attachResponse.ok) {
-      const errorText = await attachResponse.text()
-      console.error("[v0] File attach error:", errorText)
+    if (!vectorStoreFileResponse.ok) {
+      const errorText = await vectorStoreFileResponse.text()
+      console.error("[v0] Vector store file add error:", errorText)
+      return NextResponse.json({ error: `Failed to add file to vector store: ${errorText}` }, { status: 500 })
     }
 
-    console.log("[v0] File attached to assistant")
+    const vectorStoreFile = await vectorStoreFileResponse.json()
+    console.log("[v0] File added to vector store:", vectorStoreFile.id)
 
     return NextResponse.json({
       success: true,
       fileId: uploadedFile.id,
       filename: file.name,
+      vectorStoreFileId: vectorStoreFile.id,
     })
   } catch (error) {
     console.error("[v0] Upload error:", error)

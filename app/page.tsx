@@ -15,21 +15,17 @@ import {
   Zap,
   AlertCircle,
   Upload,
-  LogOut,
   Paperclip,
   X,
 } from "lucide-react"
 import Image from "next/image"
 import TextareaAutosize from "react-textarea-autosize"
 import { MarkdownMessage } from "@/components/markdown-message"
-import { useUser, useClerk } from "@clerk/nextjs"
-import { useRouter } from "next/navigation"
 
 type Message = {
   id: string
   role: "user" | "assistant"
   content: string
-  attachments?: Array<{ id: string; name: string; type: string }>
 }
 
 type Agent = {
@@ -74,9 +70,6 @@ const agents: Agent[] = [
 ]
 
 export default function AlfredChat() {
-  const { user, isLoaded } = useUser()
-  const { signOut } = useClerk()
-  const router = useRouter()
   const [messages, setMessages] = useState<Message[]>([
     {
       id: "welcome",
@@ -93,12 +86,13 @@ export default function AlfredChat() {
 
   const [assistantId, setAssistantId] = useState<string | null>(null)
   const [threadId, setThreadId] = useState<string | null>(null)
+  const [vectorStoreId, setVectorStoreId] = useState<string | null>(null)
   const [initError, setInitError] = useState<string | null>(null)
   const [isInitializing, setIsInitializing] = useState(true)
   const [uploadedFiles, setUploadedFiles] = useState<Array<{ id: string; name: string }>>([])
   const [isUploading, setIsUploading] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
-  const [pendingAttachments, setPendingAttachments] = useState<Array<{ file: File; preview?: string }>>([])
+  const [pendingFiles, setPendingFiles] = useState<File[]>([])
 
   useEffect(() => {
     const initAssistant = async () => {
@@ -120,9 +114,11 @@ export default function AlfredChat() {
           throw new Error(errorData.error || "Failed to create assistant")
         }
 
-        const { assistantId: newAssistantId } = await assistantRes.json()
+        const { assistantId: newAssistantId, vectorStoreId: newVectorStoreId } = await assistantRes.json()
         console.log("[v0] Assistant created:", newAssistantId)
+        console.log("[v0] Vector store ID:", newVectorStoreId)
         setAssistantId(newAssistantId)
+        setVectorStoreId(newVectorStoreId)
 
         // Create thread
         console.log("[v0] Creating thread...")
@@ -159,61 +155,59 @@ export default function AlfredChat() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
   }, [messages])
 
-  useEffect(() => {
-    if (isLoaded && user) {
-      const email = user.primaryEmailAddress?.emailAddress
-      if (email && !email.endsWith("@mottafinancial.com")) {
-        // Redirect to sign-in with error
-        signOut().then(() => {
-          router.push("/sign-in?error=unauthorized_domain")
-        })
-      }
-    }
-  }, [isLoaded, user, signOut, router])
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if ((!input.trim() && pendingAttachments.length === 0) || isLoading || !assistantId || !threadId) {
+    if (!input.trim() || isLoading || !assistantId || !threadId) {
       return
     }
 
     console.log("[v0] Sending message:", input.trim())
 
-    const uploadedAttachments: Array<{ id: string; name: string; type: string }> = []
-    if (pendingAttachments.length > 0) {
+    if (pendingFiles.length > 0 && vectorStoreId) {
+      console.log("[v0] Uploading", pendingFiles.length, "files before sending message")
       setIsUploading(true)
-      for (const attachment of pendingAttachments) {
+
+      for (const file of pendingFiles) {
         try {
           const formData = new FormData()
-          formData.append("file", attachment.file)
+          formData.append("file", file)
           formData.append("assistantId", assistantId)
+          formData.append("vectorStoreId", vectorStoreId)
 
           const response = await fetch("/api/assistant/upload", {
             method: "POST",
             body: formData,
           })
 
-          if (response.ok) {
-            const data = await response.json()
-            uploadedAttachments.push({
-              id: data.fileId,
-              name: data.filename,
-              type: attachment.file.type,
-            })
+          if (!response.ok) {
+            const errorData = await response.json()
+            throw new Error(errorData.error || "Upload failed")
           }
+
+          const data = await response.json()
+          console.log("[v0] File uploaded successfully:", data)
+          setUploadedFiles((prev) => [...prev, { id: data.fileId, name: data.filename }])
         } catch (error) {
           console.error("[v0] Upload error:", error)
+          setMessages((prev) => [
+            ...prev,
+            {
+              id: Date.now().toString(),
+              role: "assistant",
+              content: `My apologies, I encountered an error uploading "${file.name}": ${error instanceof Error ? error.message : "Unknown error"}`,
+            },
+          ])
         }
       }
+
       setIsUploading(false)
-      setPendingAttachments([])
+      setPendingFiles([])
     }
 
     const userMessage: Message = {
       id: Date.now().toString(),
       role: "user",
-      content: input.trim() || "(Attached files)",
-      attachments: uploadedAttachments.length > 0 ? uploadedAttachments : undefined,
+      content: input.trim(),
     }
 
     setMessages((prev) => [...prev, userMessage])
@@ -238,7 +232,6 @@ export default function AlfredChat() {
           threadId,
           assistantId,
           message: userMessage.content,
-          attachments: userMessage.attachments?.map((attachment) => attachment.id),
         }),
       })
 
@@ -320,35 +313,73 @@ export default function AlfredChat() {
     }
   }
 
-  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file || !assistantId || !vectorStoreId) return
+
+    console.log("[v0] Starting file upload:", file.name)
+    setIsUploading(true)
+
+    try {
+      const formData = new FormData()
+      formData.append("file", file)
+      formData.append("assistantId", assistantId)
+      formData.append("vectorStoreId", vectorStoreId)
+
+      const response = await fetch("/api/assistant/upload", {
+        method: "POST",
+        body: formData,
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || "Upload failed")
+      }
+
+      const data = await response.json()
+      console.log("[v0] File uploaded successfully:", data)
+
+      setUploadedFiles((prev) => [...prev, { id: data.fileId, name: data.filename }])
+
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: Date.now().toString(),
+          role: "assistant",
+          content: `I have successfully added "${data.filename}" to my knowledge base. I can now reference this document in our conversations.`,
+        },
+      ])
+    } catch (error) {
+      console.error("[v0] Upload error:", error)
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: Date.now().toString(),
+          role: "assistant",
+          content: `My apologies, I encountered an error uploading the file: ${error instanceof Error ? error.message : "Unknown error"}`,
+        },
+      ])
+    } finally {
+      setIsUploading(false)
+      if (fileInputRef.current) {
+        fileInputRef.current.value = ""
+      }
+    }
+  }
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || [])
-    if (files.length === 0) return
-
-    console.log("[v0] Files selected:", files.length)
-
-    const newAttachments = await Promise.all(
-      files.map(async (file) => {
-        let preview: string | undefined
-        if (file.type.startsWith("image/")) {
-          preview = await new Promise<string>((resolve) => {
-            const reader = new FileReader()
-            reader.onloadend = () => resolve(reader.result as string)
-            reader.readAsDataURL(file)
-          })
-        }
-        return { file, preview }
-      }),
-    )
-
-    setPendingAttachments((prev) => [...prev, ...newAttachments])
-
+    if (files.length > 0) {
+      setPendingFiles((prev) => [...prev, ...files])
+    }
+    // Reset input so same file can be selected again
     if (fileInputRef.current) {
       fileInputRef.current.value = ""
     }
   }
 
-  const removeAttachment = (index: number) => {
-    setPendingAttachments((prev) => prev.filter((_, i) => i !== index))
+  const handleRemovePendingFile = (index: number) => {
+    setPendingFiles((prev) => prev.filter((_, i) => i !== index))
   }
 
   if (isInitializing) {
@@ -441,18 +472,6 @@ export default function AlfredChat() {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            {user && (
-              <div className="flex items-center gap-2 mr-2">
-                <div className="text-right hidden sm:block">
-                  <p className="text-sm font-medium">{user.fullName || user.firstName}</p>
-                  <p className="text-xs text-muted-foreground">{user.primaryEmailAddress?.emailAddress}</p>
-                </div>
-                <Button variant="outline" size="sm" onClick={() => signOut()} className="gap-2">
-                  <LogOut className="w-4 h-4" />
-                  <span className="hidden sm:inline">Sign Out</span>
-                </Button>
-              </div>
-            )}
             <Button
               variant={activeView === "chat" ? "default" : "outline"}
               size="sm"
@@ -471,16 +490,24 @@ export default function AlfredChat() {
               <Zap className="w-4 h-4" />
               <span className="hidden sm:inline">Agent Kit</span>
             </Button>
-            <input
-              ref={fileInputRef}
-              type="file"
-              onChange={handleFileSelect}
-              accept=".txt,.pdf,.doc,.docx,.md,.csv,.xlsx,.xls,image/*"
-              multiple
-              className="hidden"
-            />
           </div>
         </div>
+        {uploadedFiles.length > 0 && (
+          <div className="container mx-auto px-4 py-2 border-t border-border">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-xs text-muted-foreground">Knowledge Base:</span>
+              {uploadedFiles.map((file) => (
+                <div
+                  key={file.id}
+                  className="flex items-center gap-1 bg-primary/10 text-primary px-2 py-1 rounded text-xs"
+                >
+                  <FileText className="w-3 h-3" />
+                  <span>{file.name}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </header>
 
       {activeView === "chat" ? (
@@ -504,34 +531,15 @@ export default function AlfredChat() {
                       />
                     </div>
                   )}
-                  <div className="max-w-[80%]">
-                    <Card
-                      className={`px-4 py-3 ${
-                        message.role === "user"
-                          ? "bg-primary text-primary-foreground shadow-md"
-                          : "glass-card digital-border"
-                      }`}
-                    >
-                      <MarkdownMessage content={message.content} isUser={message.role === "user"} />
-                    </Card>
-                    {message.attachments && message.attachments.length > 0 && (
-                      <div className="mt-2 flex flex-wrap gap-2">
-                        {message.attachments.map((attachment) => (
-                          <div
-                            key={attachment.id}
-                            className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-xs ${
-                              message.role === "user"
-                                ? "bg-primary-foreground/10 text-primary-foreground"
-                                : "bg-muted text-muted-foreground"
-                            }`}
-                          >
-                            <FileText className="w-3 h-3" />
-                            <span>{attachment.name}</span>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
+                  <Card
+                    className={`px-4 py-3 max-w-[80%] ${
+                      message.role === "user"
+                        ? "bg-primary text-primary-foreground shadow-md"
+                        : "glass-card digital-border"
+                    }`}
+                  >
+                    <MarkdownMessage content={message.content} isUser={message.role === "user"} />
+                  </Card>
                   {message.role === "user" && (
                     <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center flex-shrink-0 digital-border">
                       <span className="text-sm font-medium text-muted-foreground">You</span>
@@ -539,49 +547,124 @@ export default function AlfredChat() {
                   )}
                 </div>
               ))}
+              {isLoading && (
+                <div className="flex gap-4 justify-start">
+                  <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center flex-shrink-0 tech-glow">
+                    <Sparkles className="w-5 h-5 text-primary-foreground animate-pulse" />
+                  </div>
+                  <Card className="px-4 py-3 glass-card digital-border">
+                    <div className="flex gap-1">
+                      <span
+                        className="w-2 h-2 rounded-full bg-primary animate-bounce"
+                        style={{ animationDelay: "0ms" }}
+                      />
+                      <span
+                        className="w-2 h-2 rounded-full bg-primary animate-bounce"
+                        style={{ animationDelay: "150ms" }}
+                      />
+                      <span
+                        className="w-2 h-2 rounded-full bg-primary animate-bounce"
+                        style={{ animationDelay: "300ms" }}
+                      />
+                    </div>
+                  </Card>
+                </div>
+              )}
+              <div ref={messagesEndRef} />
             </div>
+
+            {messages.length === 1 && (
+              <div className="mb-6">
+                <p className="text-sm text-muted-foreground mb-3 font-medium">How may I assist you today?</p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <Button
+                    variant="outline"
+                    className="justify-start h-auto py-3 px-4 text-left hover:bg-primary/10 hover:border-primary glass-card hover:tech-glow transition-all bg-transparent"
+                    onClick={() => handleQuickAction("Tell me about tax planning services")}
+                  >
+                    <div>
+                      <div className="font-medium text-sm">Tax Planning</div>
+                      <div className="text-xs text-muted-foreground">Strategic tax optimization</div>
+                    </div>
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="justify-start h-auto py-3 px-4 text-left hover:bg-primary/10 hover:border-primary glass-card hover:tech-glow transition-all bg-transparent"
+                    onClick={() => handleQuickAction("How can ALFRED AI help my business?")}
+                  >
+                    <div>
+                      <div className="font-medium text-sm">ALFRED AI Platform</div>
+                      <div className="text-xs text-muted-foreground">Learn about our technology</div>
+                    </div>
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="justify-start h-auto py-3 px-4 text-left hover:bg-primary/10 hover:border-primary glass-card hover:tech-glow transition-all bg-transparent"
+                    onClick={() => handleQuickAction("What financial planning services do you offer?")}
+                  >
+                    <div>
+                      <div className="font-medium text-sm">Financial Planning</div>
+                      <div className="text-xs text-muted-foreground">Comprehensive wealth strategies</div>
+                    </div>
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="justify-start h-auto py-3 px-4 text-left hover:bg-primary/10 hover:border-primary glass-card hover:tech-glow transition-all bg-transparent"
+                    onClick={() => handleQuickAction("Show me the agent kit")}
+                  >
+                    <div>
+                      <div className="font-medium text-sm">Agent Kit</div>
+                      <div className="text-xs text-muted-foreground">Explore specialized agents</div>
+                    </div>
+                  </Button>
+                </div>
+              </div>
+            )}
           </main>
 
           <footer className="border-t border-border bg-card/80 backdrop-blur-md shadow-lg">
             <div className="container mx-auto px-4 py-4 max-w-4xl">
-              {pendingAttachments.length > 0 && (
+              {pendingFiles.length > 0 && (
                 <div className="mb-3 flex flex-wrap gap-2">
-                  {pendingAttachments.map((attachment, index) => (
+                  {pendingFiles.map((file, index) => (
                     <div
                       key={index}
-                      className="relative group flex items-center gap-2 bg-muted px-3 py-2 rounded-md text-sm"
+                      className="flex items-center gap-2 bg-muted px-3 py-2 rounded-md text-sm border border-border"
                     >
-                      {attachment.preview ? (
-                        <img
-                          src={attachment.preview || "/placeholder.svg"}
-                          alt={attachment.file.name}
-                          className="w-8 h-8 object-cover rounded"
-                        />
-                      ) : (
-                        <FileText className="w-4 h-4" />
-                      )}
-                      <span className="max-w-[150px] truncate">{attachment.file.name}</span>
+                      <Paperclip className="w-4 h-4 text-muted-foreground" />
+                      <span className="text-foreground">{file.name}</span>
                       <button
-                        onClick={() => removeAttachment(index)}
-                        className="ml-1 p-1 hover:bg-destructive/10 rounded-full transition-colors"
+                        onClick={() => handleRemovePendingFile(index)}
+                        className="text-muted-foreground hover:text-foreground transition-colors"
+                        type="button"
                       >
-                        <X className="w-3 h-3" />
+                        <X className="w-4 h-4" />
                       </button>
                     </div>
                   ))}
                 </div>
               )}
+
               <form onSubmit={handleSubmit} className="flex gap-3 items-end">
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  onChange={handleFileSelect}
+                  accept=".txt,.pdf,.doc,.docx,.md"
+                  multiple
+                  className="hidden"
+                />
                 <Button
                   type="button"
                   variant="outline"
                   size="icon"
                   onClick={() => fileInputRef.current?.click()}
-                  disabled={isLoading || isUploading}
+                  disabled={isLoading || isUploading || !assistantId}
                   className="flex-shrink-0"
                 >
                   <Paperclip className="w-4 h-4" />
                 </Button>
+
                 <TextareaAutosize
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
@@ -599,7 +682,7 @@ export default function AlfredChat() {
                 />
                 <Button
                   type="submit"
-                  disabled={isLoading || isUploading || (!input.trim() && pendingAttachments.length === 0)}
+                  disabled={isLoading || isUploading || !input.trim()}
                   size="icon"
                   className="flex-shrink-0 tech-glow"
                 >

@@ -46,22 +46,12 @@ export async function POST(req: Request) {
       query.toLowerCase().includes("tax") ||
       query.toLowerCase().includes("irs") ||
       query.toLowerCase().includes("regulation") ||
-      query.toLowerCase().includes("revenue ruling") ||
-      query.toLowerCase().includes("deduction") ||
-      query.toLowerCase().includes("credit") ||
-      query.toLowerCase().includes("exemption") ||
-      query.toLowerCase().includes("withholding") ||
-      query.toLowerCase().includes("filing") ||
-      query.toLowerCase().includes("form 1040") ||
-      query.toLowerCase().includes("schedule") ||
-      query.toLowerCase().includes("publication") ||
-      /\b(20\d{2})\b/.test(query) // Detect year references like "2024"
+      query.toLowerCase().includes("revenue ruling")
 
-    const siteFilter = isTaxQuery
-      ? " site:irs.gov OR site:taxnotes.com OR site:ustaxcourt.gov OR site:treasury.gov OR site:congress.gov"
-      : ""
+    const siteFilter = isTaxQuery ? " site:irs.gov OR site:taxnotes.com OR site:ustaxcourt.gov" : ""
+    const enhancedQuery = query + siteFilter
 
-    console.log("[v0] Enhanced query:", query + siteFilter)
+    console.log("[v0] Enhanced query:", enhancedQuery)
     console.log("[v0] Is tax query:", isTaxQuery)
 
     try {
@@ -70,7 +60,7 @@ export async function POST(req: Request) {
       const data = await braveSearchLimiter.execute(async () => {
         console.log("[v0] Executing Brave Search API call...")
         const braveResponse = await fetch(
-          `https://api.search.brave.com/res/v1/web/search?q=${encodeURIComponent(query + siteFilter)}&count=${numResults}`,
+          `https://api.search.brave.com/res/v1/web/search?q=${encodeURIComponent(enhancedQuery)}&count=${numResults}`,
           {
             headers: {
               Accept: "application/json",
@@ -102,8 +92,6 @@ export async function POST(req: Request) {
         title: result.title,
         url: result.url,
         snippet: result.description || "",
-        published: result.age || null, // Include publication date if available
-        relevance: result.page_age_days ? `Updated ${result.page_age_days} days ago` : null,
       }))
 
       return NextResponse.json({
@@ -113,7 +101,6 @@ export async function POST(req: Request) {
         count: results.length,
         isTaxQuery,
         source: "brave",
-        suggestion: results.length > 0 ? "Use web_scrape to get full content from specific URLs" : null,
       })
     } catch (braveError) {
       console.error("[v0] Brave Search failed:", braveError)

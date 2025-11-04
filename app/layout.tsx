@@ -3,10 +3,8 @@ import type { Metadata } from "next"
 import { GeistSans } from "geist/font/sans"
 import { GeistMono } from "geist/font/mono"
 import { Analytics } from "@vercel/analytics/next"
-import { ClerkProvider } from "@clerk/nextjs"
 import "./globals.css"
 import { Suspense } from "react"
-import { DomainGuard } from "@/components/domain-guard"
 
 export const metadata: Metadata = {
   title: "ALFRED AI - Motta Financial Virtual Butler",
@@ -21,15 +19,11 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <ClerkProvider>
-      <html lang="en" className="dark">
-        <body className={`font-sans ${GeistSans.variable} ${GeistMono.variable} antialiased`}>
-          <DomainGuard>
-            <Suspense fallback={null}>{children}</Suspense>
-          </DomainGuard>
-          <Analytics />
-        </body>
-      </html>
-    </ClerkProvider>
+    <html lang="en" className="dark">
+      <body className={`font-sans ${GeistSans.variable} ${GeistMono.variable} antialiased`}>
+        <Suspense fallback={null}>{children}</Suspense>
+        <Analytics />
+      </body>
+    </html>
   )
 }
