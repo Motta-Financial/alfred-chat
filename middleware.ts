@@ -1,20 +1,58 @@
-import { NextResponse } from "next/server"
-import type { NextRequest } from "next/server"
+import { createServerClient } from "@supabase/ssr"
+import { NextResponse, type NextRequest } from "next/server"
 
-// Authentication is handled by DomainGuard component on the client side
-export function middleware(request: NextRequest) {
-  console.log("[v0] Middleware processing:", request.nextUrl.pathname)
+export async function middleware(request: NextRequest) {
+  const { pathname } = request.nextUrl
 
-  // Allow all requests to pass through
-  // Client-side DomainGuard will handle authentication and domain checks
-  return NextResponse.next()
+  // Pass through auth routes without session check
+  if (pathname.startsWith("/login") || pathname.startsWith("/auth/")) {
+    return NextResponse.next()
+  }
+
+  const response = NextResponse.next({
+    request,
+  })
+
+  const cookieDomain = process.env.SUPABASE_COOKIE_DOMAIN
+
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() {
+          return request.cookies.getAll()
+        },
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value, options }) => {
+            request.cookies.set(name, value)
+            response.cookies.set(name, value, {
+              ...options,
+              ...(cookieDomain ? { domain: cookieDomain } : {}),
+              sameSite: "lax",
+              secure: true,
+            })
+          })
+        },
+      },
+    },
+  )
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) {
+    const loginUrl = request.nextUrl.clone()
+    loginUrl.pathname = "/login"
+    return NextResponse.redirect(loginUrl)
+  }
+
+  return response
 }
 
 export const config = {
   matcher: [
-    // Skip Next.js internals and all static files
-    "/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)",
-    // Always run for API routes
-    "/(api|trpc)(.*)",
+    "/((?!_next/static|_next/image|favicon\\.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],
 }
