@@ -21,7 +21,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         className={`${inter.variable} font-sans antialiased bg-[#EAE6E1] text-gray-900 h-screen flex flex-col`}
       >
         {/* Top header bar */}
-        <header className="flex items-center justify-between px-6 py-3 bg-gradient-to-r from-amber-500 to-orange-500 shadow-sm flex-shrink-0">
+        <header className="flex items-center justify-between px-6 py-3 bg-[#6B745D] shadow-sm flex-shrink-0">
           <div className="flex items-center gap-3">
             <div className="relative w-8 h-8 rounded-full overflow-hidden bg-white/20 flex items-center justify-center">
               <LogoImage size={28} className="object-contain" />

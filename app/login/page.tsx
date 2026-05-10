@@ -15,8 +15,6 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false)
   const [sent, setSent] = useState(false)
 
-  const supabase = createClient()
-
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
 
@@ -28,6 +26,7 @@ export default function LoginPage() {
     }
 
     setLoading(true)
+    const supabase = createClient()
     const { error } = await supabase.auth.signInWithOtp({
       email: trimmed,
       options: {
@@ -59,15 +58,15 @@ export default function LoginPage() {
         </div>
 
         {sent ? (
-          <div className="rounded-xl border border-amber-200 bg-amber-50 p-6 text-center space-y-2">
-            <p className="text-sm font-medium text-amber-900">Check your inbox</p>
-            <p className="text-sm text-amber-700">
+          <div className="rounded-xl border border-[#8E9B79]/40 bg-[#8E9B79]/10 p-6 text-center space-y-2">
+            <p className="text-sm font-medium text-[#4a5240]">Check your inbox</p>
+            <p className="text-sm text-[#6B745D]">
               We emailed a magic link to <strong>{email}</strong>. Click it to sign in.
             </p>
             <Button
               variant="ghost"
               size="sm"
-              className="mt-2 text-amber-700 hover:text-amber-900"
+              className="mt-2 text-[#6B745D] hover:text-[#4a5240]"
               onClick={() => setSent(false)}
             >
               Use a different email
@@ -94,7 +93,7 @@ export default function LoginPage() {
             <Button
               type="submit"
               disabled={loading}
-              className="w-full bg-amber-500 hover:bg-amber-600 text-white"
+              className="w-full bg-[#6B745D] hover:bg-[#4a5240] text-white"
             >
               {loading ? "Sending…" : "Send magic link"}
             </Button>
