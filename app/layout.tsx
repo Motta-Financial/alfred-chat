@@ -4,7 +4,7 @@ import { Analytics } from "@vercel/analytics/next"
 import { Toaster } from "sonner"
 import "./globals.css"
 import { HealthDot } from "@/components/alfred-chat/HealthDot"
-import Image from "next/image"
+import { LogoImage } from "@/components/alfred-chat/LogoImage"
 import { Sparkles } from "lucide-react"
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" })
@@ -23,17 +23,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         {/* Top header bar */}
         <header className="flex items-center justify-between px-6 py-3 bg-gradient-to-r from-amber-500 to-orange-500 shadow-sm flex-shrink-0">
           <div className="flex items-center gap-3">
-            <div className="relative w-8 h-8 rounded-full overflow-hidden bg-white/20">
-              <Image
-                src="/images/alfred-logo.png"
-                alt="ALFRED"
-                fill
-                className="object-contain p-0.5"
-                priority
-                onError={(e) => {
-                  ;(e.currentTarget as HTMLImageElement).style.display = "none"
-                }}
-              />
+            <div className="relative w-8 h-8 rounded-full overflow-hidden bg-white/20 flex items-center justify-center">
+              <LogoImage size={28} className="object-contain" />
             </div>
             <div className="flex items-center gap-1.5">
               <Sparkles className="w-4 h-4 text-white/80" />

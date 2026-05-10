@@ -6,7 +6,7 @@ import { createClient } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import Image from "next/image"
+import { LogoImage } from "@/components/alfred-chat/LogoImage"
 
 const ALLOWED_DOMAINS = ["@motta.cpa", "@mottafinancial.com"]
 
@@ -49,17 +49,8 @@ export default function LoginPage() {
     <div className="min-h-screen flex items-center justify-center bg-[#EAE6E1]">
       <div className="w-full max-w-sm space-y-8 px-6">
         <div className="flex flex-col items-center gap-3">
-          <div className="relative w-16 h-16">
-            <Image
-              src="/images/alfred-logo.png"
-              alt="ALFRED"
-              fill
-              className="object-contain"
-              priority
-              onError={(e) => {
-                ;(e.currentTarget as HTMLImageElement).style.display = "none"
-              }}
-            />
+          <div className="w-16 h-16 flex items-center justify-center">
+            <LogoImage size={64} className="object-contain" />
           </div>
           <div className="text-center">
             <h1 className="text-2xl font-semibold text-gray-900 tracking-tight">Sign in to ALFRED</h1>
