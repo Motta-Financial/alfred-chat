@@ -38,8 +38,6 @@ function makeTransport(supabase: SupabaseClient, getConversationId: () => Conver
 }
 
 export function AlfredChat({ conversationId, onConversationId, initialMessages }: AlfredChatProps) {
-  const supabase = createClient()
-
   // Keep conversationId in a ref so the transport closure always reads the latest value
   // without needing to recreate the transport on every render.
   const conversationIdRef = useRef<ConversationId>(conversationId)
@@ -49,7 +47,7 @@ export function AlfredChat({ conversationId, onConversationId, initialMessages }
 
   const transportRef = useRef<DefaultChatTransport | null>(null)
   if (!transportRef.current) {
-    transportRef.current = makeTransport(supabase, () => conversationIdRef.current)
+    transportRef.current = makeTransport(createClient(), () => conversationIdRef.current)
   }
 
   const { messages, setMessages, sendMessage, stop, status } = useChat({
@@ -140,7 +138,7 @@ export function AlfredChat({ conversationId, onConversationId, initialMessages }
             minRows={1}
             maxRows={8}
             disabled={isStreaming}
-            className="flex-1 resize-none rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm outline-none transition-colors focus:border-amber-400 focus:ring-2 focus:ring-amber-100 disabled:opacity-50"
+            className="flex-1 resize-none rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm outline-none transition-colors focus:border-[#8E9B79] focus:ring-2 focus:ring-[#8E9B79]/20 disabled:opacity-50"
           />
           {isStreaming ? (
             <Button
@@ -157,7 +155,7 @@ export function AlfredChat({ conversationId, onConversationId, initialMessages }
               onClick={handleSend}
               disabled={!input.trim()}
               size="icon"
-              className="flex-shrink-0 rounded-xl h-11 w-11 bg-amber-500 hover:bg-amber-600 text-white disabled:opacity-40"
+              className="flex-shrink-0 rounded-xl h-11 w-11 bg-[#6B745D] hover:bg-[#4a5240] text-white disabled:opacity-40"
               title="Send"
             >
               <Send className="w-4 h-4" />
@@ -177,7 +175,7 @@ function MessageRow({ message }: { message: UIMessage }) {
       <div
         className={`max-w-[80%] rounded-2xl px-4 py-3 ${
           isUser
-            ? "bg-amber-500 text-white rounded-tr-sm"
+            ? "bg-[#6B745D] text-white rounded-tr-sm"
             : "bg-gray-100 text-gray-900 rounded-tl-sm"
         }`}
       >

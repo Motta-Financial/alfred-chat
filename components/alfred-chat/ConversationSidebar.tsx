@@ -28,7 +28,6 @@ export function ConversationSidebar({
   onSelect,
   onNew,
 }: ConversationSidebarProps) {
-  const supabase = createClient()
   const [conversations, setConversations] = useState<Conversation[]>([])
   const [loading, setLoading] = useState(false)
   const [loadingId, setLoadingId] = useState<string | null>(null)
@@ -38,7 +37,7 @@ export function ConversationSidebar({
     setLoading(true)
     setError(null)
     try {
-      const token = await getBearerToken(supabase)
+      const token = await getBearerToken(createClient())
       const res = await fetch(HUB_CONVERSATIONS_URL, {
         headers: { Authorization: `Bearer ${token}` },
         cache: "no-store",
@@ -54,7 +53,7 @@ export function ConversationSidebar({
     } finally {
       setLoading(false)
     }
-  }, [supabase])
+  }, [])
 
   // Fetch on mount and whenever the trigger increments (after a message is sent)
   useEffect(() => {
@@ -65,7 +64,7 @@ export function ConversationSidebar({
     if (id === activeConversationId) return
     setLoadingId(id)
     try {
-      const token = await getBearerToken(supabase)
+      const token = await getBearerToken(createClient())
       const res = await fetch(`${HUB_CONVERSATIONS_URL}/${id}`, {
         headers: { Authorization: `Bearer ${token}` },
         cache: "no-store",
@@ -101,7 +100,7 @@ export function ConversationSidebar({
         <Button
           onClick={onNew}
           variant="outline"
-          className="w-full justify-start gap-2 bg-white hover:bg-amber-50 border-gray-200 text-gray-700"
+          className="w-full justify-start gap-2 bg-white hover:bg-[#8E9B79]/10 border-gray-200 text-gray-700"
         >
           <Plus className="w-4 h-4" />
           New chat
@@ -131,7 +130,7 @@ export function ConversationSidebar({
             disabled={loadingId === conv.id}
             className={cn(
               "w-full text-left px-4 py-3 flex flex-col gap-0.5 hover:bg-white/70 transition-colors",
-              activeConversationId === conv.id && "bg-white border-r-2 border-amber-500",
+              activeConversationId === conv.id && "bg-white border-r-2 border-[#6B745D]",
             )}
           >
             <span className="text-sm font-medium text-gray-800 truncate leading-tight">
