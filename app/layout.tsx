@@ -1,35 +1,51 @@
-import type React from "react"
 import type { Metadata } from "next"
-import { GeistSans } from "geist/font/sans"
-import { GeistMono } from "geist/font/mono"
+import { Inter } from "next/font/google"
 import { Analytics } from "@vercel/analytics/next"
-import { ClerkProvider } from "@clerk/nextjs"
+import { Toaster } from "sonner"
 import "./globals.css"
-import { Suspense } from "react"
-import { DomainGuard } from "@/components/domain-guard"
+import { HealthDot } from "@/components/alfred-chat/HealthDot"
+import { LogoImage } from "@/components/alfred-chat/LogoImage"
+import { Sparkles } from "lucide-react"
+
+const inter = Inter({ subsets: ["latin"], variable: "--font-inter" })
 
 export const metadata: Metadata = {
-  title: "ALFRED AI - Motta Financial Virtual Butler",
-  description:
-    "Your intelligent AI assistant for accounting, tax planning, and financial services. Powered by Motta Financial.",
-  generator: "v0.app",
+  title: "ALFRED · Motta",
+  description: "Motta Hub Assistant — AI-powered practice management for Motta Financial.",
 }
 
-export default function RootLayout({
-  children,
-}: Readonly<{
-  children: React.ReactNode
-}>) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <ClerkProvider>
-      <html lang="en" className="dark">
-        <body className={`font-sans ${GeistSans.variable} ${GeistMono.variable} antialiased`}>
-          <DomainGuard>
-            <Suspense fallback={null}>{children}</Suspense>
-          </DomainGuard>
-          <Analytics />
-        </body>
-      </html>
-    </ClerkProvider>
+    <html lang="en">
+      <body
+        className={`${inter.variable} font-sans antialiased bg-[#EAE6E1] text-gray-900 h-screen flex flex-col`}
+      >
+        {/* Top header bar */}
+        <header className="flex items-center justify-between px-6 py-3 bg-gradient-to-r from-amber-500 to-orange-500 shadow-sm flex-shrink-0">
+          <div className="flex items-center gap-3">
+            <div className="relative w-8 h-8 rounded-full overflow-hidden bg-white/20 flex items-center justify-center">
+              <LogoImage size={28} className="object-contain" />
+            </div>
+            <div className="flex items-center gap-1.5">
+              <Sparkles className="w-4 h-4 text-white/80" />
+              <span className="font-semibold text-white tracking-tight">ALFRED</span>
+              <span className="text-white/60 text-sm font-normal">· Motta Hub Assistant</span>
+            </div>
+          </div>
+          <HealthDot />
+        </header>
+
+        {/* Page content */}
+        <main className="flex-1 min-h-0 bg-white">{children}</main>
+
+        {/* Small footer */}
+        <footer className="flex-shrink-0 text-center py-2 text-xs text-gray-400 bg-[#EAE6E1]">
+          © {new Date().getFullYear()} Motta Financial · Internal use only
+        </footer>
+
+        <Toaster richColors position="top-right" />
+        <Analytics />
+      </body>
+    </html>
   )
 }
