@@ -1,5 +1,5 @@
 {
-  "name": "my-v0-project",
+  "name": "alfred-chat",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -9,10 +9,7 @@
     "start": "next start"
   },
   "dependencies": {
-    "@adobe/pdfservices-node-sdk": "latest",
-    "@ai-sdk/openai": "latest",
-    "@clerk/nextjs": "latest",
-    "@hookform/resolvers": "^3.10.0",
+    "@ai-sdk/react": "latest",
     "@radix-ui/react-accordion": "1.2.2",
     "@radix-ui/react-alert-dialog": "1.1.4",
     "@radix-ui/react-aspect-ratio": "1.1.1",
@@ -40,10 +37,11 @@
     "@radix-ui/react-toggle": "1.1.1",
     "@radix-ui/react-toggle-group": "1.1.1",
     "@radix-ui/react-tooltip": "1.1.6",
+    "@supabase/ssr": "latest",
+    "@supabase/supabase-js": "latest",
     "@vercel/analytics": "latest",
     "ai": "latest",
     "autoprefixer": "^10.4.20",
-    "buffer": "latest",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "1.0.4",
@@ -54,7 +52,6 @@
     "lucide-react": "^0.454.0",
     "next": "15.2.8",
     "next-themes": "latest",
-    "openai": "latest",
     "react": "^19",
     "react-day-picker": "9.8.0",
     "react-dom": "^19",
@@ -65,11 +62,9 @@
     "recharts": "2.15.4",
     "remark-gfm": "latest",
     "sonner": "^1.7.4",
-    "stream": "latest",
     "tailwind-merge": "^2.5.5",
     "tailwindcss-animate": "^1.0.7",
     "vaul": "^0.9.9",
-    "ws": "latest",
     "zod": "3.25.76"
   },
   "devDependencies": {
