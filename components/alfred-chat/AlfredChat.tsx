@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button"
 import { MarkdownMessage } from "@/components/markdown-message"
 import { createClient } from "@/lib/supabase/client"
 import { getBearerToken, HUB_CHAT_URL } from "@/lib/hub"
+import { ModelSelector, useSelectedModel } from "@/components/alfred-chat/ModelSelector"
 import type { SupabaseClient } from "@supabase/supabase-js"
 
 type ConversationId = string | null
@@ -19,7 +20,11 @@ interface AlfredChatProps {
   initialMessages?: UIMessage[]
 }
 
-function makeTransport(supabase: SupabaseClient, getConversationId: () => ConversationId) {
+function makeTransport(
+  supabase: SupabaseClient,
+  getConversationId: () => ConversationId,
+  getModelId: () => string,
+) {
   return new DefaultChatTransport({
     api: HUB_CHAT_URL,
     credentials: "omit",
@@ -31,6 +36,7 @@ function makeTransport(supabase: SupabaseClient, getConversationId: () => Conver
       const id = getConversationId()
       return {
         audience: "staff",
+        model: getModelId(),
         ...(id ? { conversationId: id } : {}),
       }
     },
@@ -45,9 +51,19 @@ export function AlfredChat({ conversationId, onConversationId, initialMessages }
     conversationIdRef.current = conversationId
   }, [conversationId])
 
+  const [selectedModelId, setSelectedModelId] = useSelectedModel()
+  const modelIdRef = useRef<string>(selectedModelId)
+  useEffect(() => {
+    modelIdRef.current = selectedModelId
+  }, [selectedModelId])
+
   const transportRef = useRef<DefaultChatTransport | null>(null)
   if (!transportRef.current) {
-    transportRef.current = makeTransport(createClient(), () => conversationIdRef.current)
+    transportRef.current = makeTransport(
+      createClient(),
+      () => conversationIdRef.current,
+      () => modelIdRef.current,
+    )
   }
 
   const { messages, setMessages, sendMessage, stop, status } = useChat({
@@ -128,7 +144,14 @@ export function AlfredChat({ conversationId, onConversationId, initialMessages }
 
       {/* Input bar */}
       <div className="border-t border-gray-200 bg-white px-4 py-4">
-        <div className="flex items-end gap-3 max-w-3xl mx-auto">
+        <div className="max-w-3xl mx-auto flex flex-col gap-2">
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-medium uppercase tracking-wider text-gray-400">
+              Model
+            </span>
+            <ModelSelector value={selectedModelId} onChange={setSelectedModelId} />
+          </div>
+          <div className="flex items-end gap-3">
           <TextareaAutosize
             ref={inputRef}
             value={input}
@@ -161,6 +184,7 @@ export function AlfredChat({ conversationId, onConversationId, initialMessages }
               <Send className="w-4 h-4" />
             </Button>
           )}
+          </div>
         </div>
       </div>
     </div>
