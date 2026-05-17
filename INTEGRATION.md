@@ -49,6 +49,45 @@ request, and vice versa.
 
 ---
 
+## Hybrid data-access boundary
+
+ALFRED runs a deliberate split between data it reads directly from
+Supabase (browser → Postgres via the user's anon-key JWT, RLS-enforced)
+and data it goes to the Hub for. The rule is: **direct reads only for
+ALFRED's own conversation surface and other low-sensitivity, RLS-safe
+views; everything privileged goes through the Hub.**
+
+| Concern | Path | Why |
+|---|---|---|
+| Sign-in / session refresh | Direct Supabase Auth | `@supabase/ssr` |
+| List my conversations | **Direct** read of `alfred_conversations` | RLS on `end_user_team_member_id` filters to caller |
+| Load messages for a conversation | **Direct** read of `alfred_messages` | RLS rejects others' rows |
+| Realtime new-message updates | Direct Supabase Realtime channel | No Hub fan-out needed |
+| Send a message / stream AI response | **Hub** `/api/alfred/chat` | Hub owns model, tools, atomic user+assistant write, `ai_usage_log` |
+| Karbon / Ignition / Calendly / Zoom / ProConnect / `clients_unified` / `tax_returns` / financial data | **Hub** | Service-role + business rules + audit log |
+| Anything that needs `SUPABASE_SERVICE_ROLE_KEY` | **Hub** | Never exposed to the browser |
+
+All direct reads MUST go through `lib/supabase/queries.ts`. Adding a new
+table requires a confirmed RLS policy and an entry in this table.
+
+### RLS expectations for direct-read tables
+
+- `alfred_conversations` — `end_user_team_member_id` resolves (via the
+  team-member lookup) to the authenticated user's `auth.uid()`. Anon
+  callers must see zero rows.
+- `alfred_messages` — `conversation_id` belongs to a conversation owned
+  by the authenticated user. Anon callers must see zero rows.
+
+Smoke-test before deploying any new direct-read table:
+
+```bash
+curl -sS "$NEXT_PUBLIC_ALFRED_STORAGE_SUPABASE_URL/rest/v1/<table>?select=id&limit=1" \
+  -H "apikey: $NEXT_PUBLIC_ALFRED_STORAGE_SUPABASE_ANON_KEY"
+# Expect: []
+```
+
+---
+
 ## Environment Variables Required on Vercel (alfred-chat project)
 
 | Variable | Description |

@@ -8,7 +8,7 @@ import TextareaAutosize from "react-textarea-autosize"
 import { Button } from "@/components/ui/button"
 import { MarkdownMessage } from "@/components/markdown-message"
 import { createClient } from "@/lib/supabase/client"
-import { getBearerToken, HUB_CHAT_URL } from "@/lib/hub"
+import { getBearerToken, HUB_CHAT_URL, assertHubConfigured } from "@/lib/hub"
 import { ModelSelector, useSelectedModel } from "@/components/alfred-chat/ModelSelector"
 import type { SupabaseClient } from "@supabase/supabase-js"
 
@@ -29,6 +29,7 @@ function makeTransport(
     api: HUB_CHAT_URL,
     credentials: "omit",
     headers: async () => {
+      assertHubConfigured()
       const token = await getBearerToken(supabase)
       return { Authorization: `Bearer ${token}` }
     },

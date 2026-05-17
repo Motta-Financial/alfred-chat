@@ -3,17 +3,16 @@
 import { useCallback, useEffect, useState } from "react"
 import { formatDistanceToNow } from "date-fns"
 import { MessageSquare, Plus, Loader2 } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { createClient } from "@/lib/supabase/client"
-import { getBearerToken, HUB_CONVERSATIONS_URL } from "@/lib/hub"
 import type { UIMessage } from "ai"
-import { cn } from "@/lib/utils"
 
-interface Conversation {
-  id: string
-  title: string
-  updated_at: string
-}
+import { Button } from "@/components/ui/button"
+import {
+  type ConversationRow,
+  listMessages,
+  listMyConversations,
+  subscribeToConversations,
+} from "@/lib/supabase/queries"
+import { cn } from "@/lib/utils"
 
 interface ConversationSidebarProps {
   activeConversationId: string | null
@@ -28,7 +27,7 @@ export function ConversationSidebar({
   onSelect,
   onNew,
 }: ConversationSidebarProps) {
-  const [conversations, setConversations] = useState<Conversation[]>([])
+  const [conversations, setConversations] = useState<ConversationRow[]>([])
   const [loading, setLoading] = useState(false)
   const [loadingId, setLoadingId] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -37,17 +36,8 @@ export function ConversationSidebar({
     setLoading(true)
     setError(null)
     try {
-      const token = await getBearerToken(createClient())
-      const res = await fetch(HUB_CONVERSATIONS_URL, {
-        headers: { Authorization: `Bearer ${token}` },
-        cache: "no-store",
-      })
-      if (!res.ok) throw new Error(`${res.status} ${res.statusText}`)
-      const data = await res.json()
-      const sorted = (data.conversations as Conversation[]).sort(
-        (a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime(),
-      )
-      setConversations(sorted)
+      const rows = await listMyConversations()
+      setConversations(rows)
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load conversations")
     } finally {
@@ -55,36 +45,25 @@ export function ConversationSidebar({
     }
   }, [])
 
-  // Fetch on mount and whenever the trigger increments (after a message is sent)
+  // Initial fetch + refetch when the parent signals a new message landed.
   useEffect(() => {
-    fetchConversations()
+    void fetchConversations()
   }, [fetchConversations, refreshTrigger])
+
+  // Live updates: any insert/update/delete on alfred_conversations the
+  // caller is permitted to see triggers a refetch.
+  useEffect(() => {
+    const unsubscribe = subscribeToConversations(() => {
+      void fetchConversations()
+    })
+    return unsubscribe
+  }, [fetchConversations])
 
   const handleSelect = async (id: string) => {
     if (id === activeConversationId) return
     setLoadingId(id)
     try {
-      const token = await getBearerToken(createClient())
-      const res = await fetch(`${HUB_CONVERSATIONS_URL}/${id}`, {
-        headers: { Authorization: `Bearer ${token}` },
-        cache: "no-store",
-      })
-      if (!res.ok) throw new Error(`${res.status} ${res.statusText}`)
-      const data = await res.json()
-
-      // Map Hub message format to AI SDK UIMessage format
-      const uiMessages: UIMessage[] = (data.messages as Array<{
-        role: "user" | "assistant"
-        content: string
-        created_at: string
-      }>).map((m, i) => ({
-        id: `${id}-${i}`,
-        role: m.role,
-        parts: [{ type: "text" as const, text: m.content }],
-        content: m.content,
-        createdAt: new Date(m.created_at),
-      }))
-
+      const uiMessages = await listMessages(id)
       onSelect(id, uiMessages)
     } catch (err) {
       console.error("Failed to load conversation:", err)
@@ -115,9 +94,7 @@ export function ConversationSidebar({
           </div>
         )}
 
-        {error && (
-          <p className="text-xs text-red-500 px-4 py-3">{error}</p>
-        )}
+        {error && <p className="text-xs text-red-500 px-4 py-3">{error}</p>}
 
         {!loading && !error && conversations.length === 0 && (
           <p className="text-xs text-gray-400 px-4 py-3">No conversations yet.</p>
@@ -149,7 +126,7 @@ export function ConversationSidebar({
         ))}
       </div>
 
-      {/* Footer icon */}
+      {/* Footer */}
       <div className="px-4 py-3 border-t border-gray-200">
         <div className="flex items-center gap-2 text-xs text-gray-400">
           <MessageSquare className="w-3.5 h-3.5" />
