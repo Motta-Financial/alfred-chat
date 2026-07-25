@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useEffect, useRef, useState } from "react"
+import { memo, useCallback, useEffect, useRef, useState } from "react"
 import { useChat } from "@ai-sdk/react"
 import { DefaultChatTransport, isTextUIPart, isToolUIPart, type UIMessage } from "ai"
 import { Database, Send, Square } from "lucide-react"
@@ -58,7 +58,7 @@ export function AlfredChat({ conversationId, onConversationId, initialMessages }
     modelIdRef.current = selectedModelId
   }, [selectedModelId])
 
-  const transportRef = useRef<DefaultChatTransport | null>(null)
+  const transportRef = useRef<DefaultChatTransport<UIMessage> | null>(null)
   if (!transportRef.current) {
     transportRef.current = makeTransport(
       createClient(),
@@ -70,13 +70,12 @@ export function AlfredChat({ conversationId, onConversationId, initialMessages }
   const { messages, setMessages, sendMessage, stop, status } = useChat({
     transport: transportRef.current,
     messages: initialMessages,
-    onData(dataParts) {
-      for (const part of dataParts) {
-        // Hub emits { type: 'data-conversation', id: <uuid> }
-        if ((part as { type?: string; id?: string }).type === "data-conversation") {
-          const id = (part as { type: string; id: string }).id
-          if (id) onConversationId(id)
-        }
+    onData(part) {
+      // Hub emits { type: 'data-conversation', id: <uuid> }. onData fires
+      // once per data part (not with an array of them).
+      if (part.type === "data-conversation") {
+        const id = (part as { type: string; id?: string }).id
+        if (id) onConversationId(id)
       }
     },
   })
@@ -86,21 +85,21 @@ export function AlfredChat({ conversationId, onConversationId, initialMessages }
   const bottomRef = useRef<HTMLDivElement>(null)
   const isStreaming = status === "streaming" || status === "submitted"
 
-  // Auto-scroll to bottom when messages change
+  // Auto-scroll to bottom when messages change. Instant while streaming —
+  // a smooth scroll per token fights the next token's scroll and janks.
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" })
-  }, [messages])
+    bottomRef.current?.scrollIntoView({ behavior: isStreaming ? "auto" : "smooth" })
+  }, [messages, isStreaming])
 
   // Focus input on mount
   useEffect(() => {
     inputRef.current?.focus()
   }, [])
 
-  // Reset messages when initialMessages prop changes (conversation switch)
+  // Reset messages when initialMessages prop changes: hydrate on
+  // conversation switch, clear on "New chat" (undefined).
   useEffect(() => {
-    if (initialMessages) {
-      setMessages(initialMessages)
-    }
+    setMessages(initialMessages ?? [])
   }, [initialMessages, setMessages])
 
   const handleSend = useCallback(async () => {
@@ -192,7 +191,10 @@ export function AlfredChat({ conversationId, onConversationId, initialMessages }
   )
 }
 
-function MessageRow({ message }: { message: UIMessage }) {
+// Memoized: while a response streams, only the message being appended to
+// changes identity — every completed row skips re-rendering (and skips
+// re-running react-markdown, the expensive part) on each token.
+const MessageRow = memo(function MessageRow({ message }: { message: UIMessage }) {
   const isUser = message.role === "user"
 
   return (
@@ -215,11 +217,12 @@ function MessageRow({ message }: { message: UIMessage }) {
             )
           }
 
-          if (isToolUIPart(part) || part.type === "dynamic-tool") {
+          const partType: string = part.type
+          if (isToolUIPart(part) || partType === "dynamic-tool") {
             const toolName =
-              part.type === "dynamic-tool"
-                ? (part as { toolName: string }).toolName
-                : part.type.replace(/^tool-/, "")
+              partType === "dynamic-tool"
+                ? (part as unknown as { toolName: string }).toolName
+                : partType.replace(/^tool-/, "")
             return (
               <span
                 key={i}
@@ -236,4 +239,4 @@ function MessageRow({ message }: { message: UIMessage }) {
       </div>
     </div>
   )
-}
+})
