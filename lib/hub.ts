@@ -28,6 +28,10 @@ export function assertHubConfigured(): void {
   readHubUrl("NEXT_PUBLIC_HUB_CONVERSATIONS_URL")
 }
 
+/** Hub model-catalog endpoint (sibling of /chat), e.g.
+ *  https://app.motta.cpa/api/alfred/models */
+export const HUB_MODELS_URL: string = HUB_CHAT_URL ? HUB_CHAT_URL.replace(/\/chat$/, "/models") : ""
+
 // Base URL of the Motta Hub (e.g. https://app.motta.cpa). Used to bounce
 // unauthenticated visitors to the Hub's sign-in page so we never have to
 // run our own auth UI here.

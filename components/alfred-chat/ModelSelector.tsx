@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { Sparkles } from "lucide-react"
 import {
   Select,
@@ -12,29 +12,34 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import {
-  ALFRED_MODELS,
   DEFAULT_MODEL_ID,
+  FALLBACK_MODELS,
+  fetchHubModels,
   getModelById,
   type AlfredModel,
 } from "@/lib/models"
+import { createClient } from "@/lib/supabase/client"
+import { getBearerToken } from "@/lib/hub"
 
 const STORAGE_KEY = "alfred:selected-model"
 
 interface ModelSelectorProps {
+  models: AlfredModel[]
   value: string
   onChange: (id: string) => void
 }
 
-export function ModelSelector({ value, onChange }: ModelSelectorProps) {
-  const current = getModelById(value)
+export function ModelSelector({ models, value, onChange }: ModelSelectorProps) {
+  const current = getModelById(models, value)
 
   // Group models by provider for the dropdown
-  const grouped = ALFRED_MODELS.reduce<Record<string, AlfredModel[]>>(
-    (acc, model) => {
-      ;(acc[model.provider] ??= []).push(model)
-      return acc
-    },
-    {},
+  const grouped = useMemo(
+    () =>
+      models.reduce<Record<string, AlfredModel[]>>((acc, model) => {
+        ;(acc[model.provider] ??= []).push(model)
+        return acc
+      }, {}),
+    [models],
   )
 
   return (
@@ -48,12 +53,12 @@ export function ModelSelector({ value, onChange }: ModelSelectorProps) {
         <SelectValue />
       </SelectTrigger>
       <SelectContent align="end" className="max-h-[400px]">
-        {Object.entries(grouped).map(([provider, models]) => (
+        {Object.entries(grouped).map(([provider, providerModels]) => (
           <SelectGroup key={provider}>
             <SelectLabel className="text-[10px] font-semibold uppercase tracking-wider text-gray-400">
               {provider}
             </SelectLabel>
-            {models.map((model) => (
+            {providerModels.map((model) => (
               <SelectItem key={model.id} value={model.id} className="py-2">
                 <div className="flex flex-col gap-0.5">
                   <span className="text-sm font-medium text-gray-800">
@@ -75,27 +80,45 @@ export function ModelSelector({ value, onChange }: ModelSelectorProps) {
 }
 
 /**
- * Hook that owns the selected model id and persists it to localStorage so the
- * choice survives navigation and refreshes.
+ * Owns the model catalog and the selected id. The catalog is fetched from
+ * the Hub (everything the firm can reach through the Vercel AI Gateway)
+ * with a static fallback; the selection persists in localStorage.
  */
-export function useSelectedModel(): [string, (id: string) => void] {
-  const [modelId, setModelId] = useState<string>(DEFAULT_MODEL_ID)
+export function useModelCatalog(): {
+  models: AlfredModel[]
+  selectedId: string
+  setSelectedId: (id: string) => void
+} {
+  const [models, setModels] = useState<AlfredModel[]>(FALLBACK_MODELS)
+  const [selectedId, setSelected] = useState<string>(DEFAULT_MODEL_ID)
 
-  // Load persisted choice on mount
   useEffect(() => {
-    if (typeof window === "undefined") return
+    let cancelled = false
+
+    // Restore the persisted choice immediately (re-validated against the
+    // live catalog once it arrives).
     const stored = window.localStorage.getItem(STORAGE_KEY)
-    if (stored && ALFRED_MODELS.some((m) => m.id === stored)) {
-      setModelId(stored)
+    if (stored) setSelected(stored)
+
+    fetchHubModels(() => getBearerToken(createClient())).then(({ models: live, defaultId }) => {
+      if (cancelled) return
+      setModels(live)
+      setSelected((prev) => (live.some((m) => m.id === prev) ? prev : defaultId))
+    })
+
+    return () => {
+      cancelled = true
     }
   }, [])
 
-  const update = (id: string) => {
-    setModelId(id)
-    if (typeof window !== "undefined") {
+  const setSelectedId = (id: string) => {
+    setSelected(id)
+    try {
       window.localStorage.setItem(STORAGE_KEY, id)
+    } catch {
+      // Storage unavailable (private mode) — selection still works for the session.
     }
   }
 
-  return [modelId, update]
+  return { models, selectedId, setSelectedId }
 }

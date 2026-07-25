@@ -3,20 +3,25 @@
 import { memo, useCallback, useEffect, useRef, useState } from "react"
 import { useChat } from "@ai-sdk/react"
 import { DefaultChatTransport, isTextUIPart, isToolUIPart, type UIMessage } from "ai"
-import { Database, Send, Square } from "lucide-react"
+import { Database, Folder, Send, Square } from "lucide-react"
 import TextareaAutosize from "react-textarea-autosize"
 import { Button } from "@/components/ui/button"
 import { MarkdownMessage } from "@/components/markdown-message"
 import { createClient } from "@/lib/supabase/client"
 import { getBearerToken, HUB_CHAT_URL, assertHubConfigured } from "@/lib/hub"
-import { ModelSelector, useSelectedModel } from "@/components/alfred-chat/ModelSelector"
+import { ModelSelector, useModelCatalog } from "@/components/alfred-chat/ModelSelector"
 import type { SupabaseClient } from "@supabase/supabase-js"
 
 type ConversationId = string | null
 
 interface AlfredChatProps {
   conversationId: ConversationId
+  /** Project this chat belongs to; sent to the Hub so it can inject the
+   *  project's instructions & knowledge into the system prompt. */
+  projectId?: string | null
+  projectName?: string | null
   onConversationId: (id: string) => void
+  onOpenProject?: () => void
   initialMessages?: UIMessage[]
 }
 
@@ -24,6 +29,7 @@ function makeTransport(
   supabase: SupabaseClient,
   getConversationId: () => ConversationId,
   getModelId: () => string,
+  getProjectId: () => string | null,
 ) {
   return new DefaultChatTransport({
     api: HUB_CHAT_URL,
@@ -35,16 +41,25 @@ function makeTransport(
     },
     body: () => {
       const id = getConversationId()
+      const projectId = getProjectId()
       return {
         audience: "staff",
         model: getModelId(),
         ...(id ? { conversationId: id } : {}),
+        ...(projectId ? { projectId } : {}),
       }
     },
   })
 }
 
-export function AlfredChat({ conversationId, onConversationId, initialMessages }: AlfredChatProps) {
+export function AlfredChat({
+  conversationId,
+  projectId = null,
+  projectName = null,
+  onConversationId,
+  onOpenProject,
+  initialMessages,
+}: AlfredChatProps) {
   // Keep conversationId in a ref so the transport closure always reads the latest value
   // without needing to recreate the transport on every render.
   const conversationIdRef = useRef<ConversationId>(conversationId)
@@ -52,7 +67,13 @@ export function AlfredChat({ conversationId, onConversationId, initialMessages }
     conversationIdRef.current = conversationId
   }, [conversationId])
 
-  const [selectedModelId, setSelectedModelId] = useSelectedModel()
+  const projectIdRef = useRef<string | null>(projectId)
+  useEffect(() => {
+    projectIdRef.current = projectId
+  }, [projectId])
+
+  const { models, selectedId: selectedModelId, setSelectedId: setSelectedModelId } =
+    useModelCatalog()
   const modelIdRef = useRef<string>(selectedModelId)
   useEffect(() => {
     modelIdRef.current = selectedModelId
@@ -64,6 +85,7 @@ export function AlfredChat({ conversationId, onConversationId, initialMessages }
       createClient(),
       () => conversationIdRef.current,
       () => modelIdRef.current,
+      () => projectIdRef.current,
     )
   }
 
@@ -118,12 +140,31 @@ export function AlfredChat({ conversationId, onConversationId, initialMessages }
 
   return (
     <div className="flex flex-col h-full">
+      {/* Project context banner */}
+      {projectName && (
+        <button
+          onClick={onOpenProject}
+          className="flex items-center gap-2 border-b border-[#8E9B79]/30 bg-[#8E9B79]/10 px-4 py-2 text-left transition-colors hover:bg-[#8E9B79]/20"
+          title="Open project"
+        >
+          <Folder className="h-3.5 w-3.5 flex-shrink-0 text-[#6B745D]" />
+          <span className="truncate text-xs font-medium text-[#4a5240]">{projectName}</span>
+          <span className="text-xs text-[#4a5240]/60">
+            — project instructions &amp; knowledge apply
+          </span>
+        </button>
+      )}
+
       {/* Message list */}
       <div className="flex-1 overflow-y-auto px-4 py-6 space-y-6">
         {messages.length === 0 && (
           <div className="flex flex-col items-center justify-center h-full gap-3 text-gray-400">
             <p className="text-lg font-medium">How can I help you today?</p>
-            <p className="text-sm">Start a conversation with ALFRED.</p>
+            <p className="text-sm">
+              {projectName
+                ? `Start a conversation in ${projectName}.`
+                : "Start a conversation with ALFRED."}
+            </p>
           </div>
         )}
 
@@ -149,7 +190,7 @@ export function AlfredChat({ conversationId, onConversationId, initialMessages }
             <span className="text-[11px] font-medium uppercase tracking-wider text-gray-400">
               Model
             </span>
-            <ModelSelector value={selectedModelId} onChange={setSelectedModelId} />
+            <ModelSelector models={models} value={selectedModelId} onChange={setSelectedModelId} />
           </div>
           <div className="flex items-end gap-3">
           <TextareaAutosize

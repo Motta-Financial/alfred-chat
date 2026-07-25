@@ -167,3 +167,68 @@ Run through these steps after deploying both repos to production:
    should hydrate with the historical messages. Send a follow-up message.
    Open `https://app.motta.cpa` (Hub) — the same thread created on
    `alfred.motta.cpa` should appear in the Hub's conversation widget.
+
+---
+
+## Projects (Claude Projects-style)
+
+ALFRED mirrors Claude Projects: conversations can be grouped into projects
+that carry **custom instructions** and **knowledge** (pasted text or
+snapshots of Hub clients) applied to every chat in the project.
+
+### Schema (Supabase, applied via migration `alfred_projects_feature`)
+
+- `alfred_projects` — id, owner_team_member_id → team_members, name,
+  description, instructions, visibility ('private' | 'team'), audience,
+  is_archived, timestamps.
+- `alfred_project_knowledge` — id, project_id → alfred_projects (cascade),
+  title, content (text injected into the system prompt), source_type
+  ('manual' | 'hub_client' | 'hub_document'), source_ref (e.g.
+  `organizations:<uuid>`), created_by_team_member_id, timestamps.
+- `alfred_conversations.project_id` — nullable FK → alfred_projects
+  (ON DELETE SET NULL: deleting a project keeps chat history).
+
+### RLS
+
+Same ownership model as alfred_conversations
+(`alfred_is_my_team_member(owner_team_member_id)` OR
+`alfred_caller_is_service_account()`), plus:
+
+- `visibility = 'team'` rows are **readable** (not writable) by any active
+  team member via the new `alfred_caller_is_team_member()` helper.
+- Knowledge rows inherit access from their parent project; mutations are
+  owner-only.
+
+The thin client writes projects/knowledge directly (user-authored rows,
+RLS-scoped) per rule 3 of `lib/supabase/queries.ts`.
+
+### Chat request contract (Hub work required)
+
+The client now sends an optional `projectId` in the POST /api/alfred/chat
+body. The Hub should:
+
+1. Load the project (service role) and verify the caller can access it
+   (owner, or `visibility='team'`).
+2. Prepend `alfred_projects.instructions` and all
+   `alfred_project_knowledge.content` rows to the system prompt.
+3. Set `project_id` on the conversation row it creates. (Until then, the
+   client files new conversations under the project itself after the
+   `data-conversation` event — owner-scoped RLS update.)
+
+### Model catalog (Hub work required)
+
+`GET /api/alfred/models` (Bearer auth, CORS same as other alfred routes):
+
+```json
+{
+  "models": [
+    { "id": "anthropic/claude-sonnet-4.6", "label": "Claude Sonnet 4.6",
+      "provider": "Anthropic", "hint": "Balanced default" }
+  ],
+  "default": "anthropic/claude-sonnet-4.6"
+}
+```
+
+Should list every model the firm exposes through the Vercel AI Gateway.
+The client falls back to its static Claude list when the endpoint is
+missing, and `POST /chat` must accept any id this endpoint returns.
