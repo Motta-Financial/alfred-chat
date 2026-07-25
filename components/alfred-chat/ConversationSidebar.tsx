@@ -19,6 +19,7 @@ interface ConversationSidebarProps {
   onNewProject: () => void
   onOpenProject: (project: ProjectRow) => void
   onOpenConversation: (id: string) => void
+  onRetry: () => void
 }
 
 export function ConversationSidebar({
@@ -33,6 +34,7 @@ export function ConversationSidebar({
   onNewProject,
   onOpenProject,
   onOpenConversation,
+  onRetry,
 }: ConversationSidebarProps) {
   const projectNameById = new Map(projects.map((p) => [p.id, p.name]))
 
@@ -114,7 +116,17 @@ export function ConversationSidebar({
           </div>
         )}
 
-        {error && <p className="px-4 py-3 text-xs text-red-500">{error}</p>}
+        {error && (
+          <div className="px-4 py-3">
+            <p className="text-xs text-red-500">{error}</p>
+            <button
+              onClick={onRetry}
+              className="mt-1.5 text-xs font-medium text-[#6B745D] underline underline-offset-2 hover:text-[#4a5240]"
+            >
+              Retry
+            </button>
+          </div>
+        )}
 
         {!loading && !error && conversations.length === 0 && (
           <p className="px-4 py-3 text-xs text-gray-400">No conversations yet.</p>

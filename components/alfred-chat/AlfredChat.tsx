@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button"
 import { MarkdownMessage } from "@/components/markdown-message"
 import { createClient } from "@/lib/supabase/client"
 import { getBearerToken, HUB_CHAT_URL, assertHubConfigured } from "@/lib/hub"
-import { ModelSelector, useModelCatalog } from "@/components/alfred-chat/ModelSelector"
+import { ModelSelector, type ModelCatalog } from "@/components/alfred-chat/ModelSelector"
 import type { SupabaseClient } from "@supabase/supabase-js"
 
 type ConversationId = string | null
@@ -23,6 +23,8 @@ interface AlfredChatProps {
   onConversationId: (id: string) => void
   onOpenProject?: () => void
   initialMessages?: UIMessage[]
+  /** Owned by ChatPage so navigation remounts don't refetch the catalog. */
+  modelCatalog: ModelCatalog
 }
 
 function makeTransport(
@@ -59,6 +61,7 @@ export function AlfredChat({
   onConversationId,
   onOpenProject,
   initialMessages,
+  modelCatalog,
 }: AlfredChatProps) {
   // Keep conversationId in a ref so the transport closure always reads the latest value
   // without needing to recreate the transport on every render.
@@ -72,8 +75,7 @@ export function AlfredChat({
     projectIdRef.current = projectId
   }, [projectId])
 
-  const { models, selectedId: selectedModelId, setSelectedId: setSelectedModelId } =
-    useModelCatalog()
+  const { models, selectedId: selectedModelId, setSelectedId: setSelectedModelId } = modelCatalog
   const modelIdRef = useRef<string>(selectedModelId)
   useEffect(() => {
     modelIdRef.current = selectedModelId

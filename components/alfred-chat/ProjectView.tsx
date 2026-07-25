@@ -22,6 +22,7 @@ import {
   buildClientKnowledge,
   deleteKnowledge,
   deleteProject,
+  getMyTeamMemberId,
   listProjectKnowledge,
   searchHubClients,
   type ConversationRow,
@@ -51,22 +52,64 @@ export function ProjectView({
 }: ProjectViewProps) {
   const [knowledge, setKnowledge] = useState<KnowledgeRow[]>([])
   const [knowledgeLoading, setKnowledgeLoading] = useState(true)
+  const [knowledgeError, setKnowledgeError] = useState<string | null>(null)
   const [adding, setAdding] = useState<"none" | "text" | "client">("none")
 
+  // Owner check: team-visible projects are readable by everyone on the
+  // team but only the owner can edit/delete/add knowledge (RLS enforces
+  // this — the UI just hides controls that would fail).
+  const [isOwner, setIsOwner] = useState(false)
+  useEffect(() => {
+    let cancelled = false
+    getMyTeamMemberId()
+      .then((id) => {
+        if (!cancelled) setIsOwner(id === project.owner_team_member_id)
+      })
+      .catch(() => {
+        if (!cancelled) setIsOwner(false)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [project.owner_team_member_id])
+
+  // The component is keyed by project.id (remounts per project), but keep
+  // a cancellation guard so a slow response can't land after unmount.
   const refreshKnowledge = useCallback(async () => {
     setKnowledgeLoading(true)
+    setKnowledgeError(null)
     try {
-      setKnowledge(await listProjectKnowledge(project.id))
+      const rows = await listProjectKnowledge(project.id)
+      setKnowledge(rows)
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Could not load project knowledge.")
+      setKnowledgeError(err instanceof Error ? err.message : "Could not load project knowledge.")
     } finally {
       setKnowledgeLoading(false)
     }
   }, [project.id])
 
   useEffect(() => {
-    void refreshKnowledge()
-  }, [refreshKnowledge])
+    let cancelled = false
+    void (async () => {
+      setKnowledgeLoading(true)
+      setKnowledgeError(null)
+      try {
+        const rows = await listProjectKnowledge(project.id)
+        if (!cancelled) setKnowledge(rows)
+      } catch (err) {
+        if (!cancelled) {
+          setKnowledgeError(
+            err instanceof Error ? err.message : "Could not load project knowledge.",
+          )
+        }
+      } finally {
+        if (!cancelled) setKnowledgeLoading(false)
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [project.id])
 
   const handleDeleteProject = async () => {
     if (
@@ -114,24 +157,26 @@ export function ProjectView({
               <p className="mt-1 text-sm text-gray-500">{project.description}</p>
             )}
           </div>
-          <div className="flex flex-shrink-0 items-center gap-1.5">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={onEdit}
-              className="gap-1.5 border-gray-200 text-gray-600"
-            >
-              <Pencil className="h-3.5 w-3.5" /> Edit
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleDeleteProject}
-              className="gap-1.5 border-gray-200 text-gray-500 hover:border-red-200 hover:bg-red-50 hover:text-red-600"
-            >
-              <Trash2 className="h-3.5 w-3.5" />
-            </Button>
-          </div>
+          {isOwner && (
+            <div className="flex flex-shrink-0 items-center gap-1.5">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={onEdit}
+                className="gap-1.5 border-gray-200 text-gray-600"
+              >
+                <Pencil className="h-3.5 w-3.5" /> Edit
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleDeleteProject}
+                className="gap-1.5 border-gray-200 text-gray-500 hover:border-red-200 hover:bg-red-50 hover:text-red-600"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+              </Button>
+            </div>
+          )}
         </div>
 
         {/* New chat CTA */}
@@ -152,10 +197,12 @@ export function ProjectView({
               <p className="whitespace-pre-wrap text-sm leading-relaxed text-gray-700">
                 {project.instructions}
               </p>
-            ) : (
+            ) : isOwner ? (
               <button onClick={onEdit} className="text-sm text-gray-400 hover:text-[#6B745D]">
                 No instructions yet — click to add how ALFRED should behave in this project.
               </button>
+            ) : (
+              <p className="text-sm text-gray-400">No instructions set for this project.</p>
             )}
           </div>
         </section>
@@ -166,24 +213,26 @@ export function ProjectView({
             <div className="flex items-center gap-2 text-sm font-semibold text-gray-800">
               <BookOpen className="h-4 w-4 text-[#6B745D]" /> Project knowledge
             </div>
-            <div className="flex gap-1.5">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setAdding(adding === "client" ? "none" : "client")}
-                className="gap-1.5 border-gray-200 text-gray-600"
-              >
-                <Building2 className="h-3.5 w-3.5" /> Attach Hub client
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setAdding(adding === "text" ? "none" : "text")}
-                className="gap-1.5 border-gray-200 text-gray-600"
-              >
-                <Plus className="h-3.5 w-3.5" /> Add text
-              </Button>
-            </div>
+            {isOwner && (
+              <div className="flex gap-1.5">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setAdding(adding === "client" ? "none" : "client")}
+                  className="gap-1.5 border-gray-200 text-gray-600"
+                >
+                  <Building2 className="h-3.5 w-3.5" /> Attach Hub client
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setAdding(adding === "text" ? "none" : "text")}
+                  className="gap-1.5 border-gray-200 text-gray-600"
+                >
+                  <Plus className="h-3.5 w-3.5" /> Add text
+                </Button>
+              </div>
+            )}
           </div>
           <p className="mt-1 text-xs text-gray-400">
             ALFRED uses everything here as context in every chat in this project.
@@ -216,9 +265,24 @@ export function ProjectView({
                 <Loader2 className="h-4 w-4 animate-spin" /> Loading knowledge…
               </div>
             )}
-            {!knowledgeLoading && knowledge.length === 0 && adding === "none" && (
+            {!knowledgeLoading && knowledgeError && (
+              <div className="flex items-center justify-between gap-3 rounded-xl border border-red-100 bg-red-50 px-4 py-3">
+                <p className="text-sm text-red-600">{knowledgeError}</p>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => void refreshKnowledge()}
+                  className="flex-shrink-0 border-red-200 text-red-600 hover:bg-red-100"
+                >
+                  Retry
+                </Button>
+              </div>
+            )}
+            {!knowledgeLoading && !knowledgeError && knowledge.length === 0 && adding === "none" && (
               <p className="rounded-xl border border-dashed border-gray-200 px-4 py-6 text-center text-sm text-gray-400">
-                No knowledge yet. Paste reference text or attach a Hub client.
+                {isOwner
+                  ? "No knowledge yet. Paste reference text or attach a Hub client."
+                  : "No knowledge has been added to this project."}
               </p>
             )}
             {knowledge.map((row) => (
@@ -239,13 +303,15 @@ export function ProjectView({
                     {row.content}
                   </p>
                 </div>
-                <button
-                  onClick={() => handleRemoveKnowledge(row)}
-                  className="flex-shrink-0 rounded-md p-1 text-gray-300 opacity-0 transition-opacity hover:bg-red-50 hover:text-red-500 group-hover:opacity-100"
-                  title="Remove"
-                >
-                  <Trash2 className="h-3.5 w-3.5" />
-                </button>
+                {isOwner && (
+                  <button
+                    onClick={() => handleRemoveKnowledge(row)}
+                    className="flex-shrink-0 rounded-md p-1 text-gray-300 opacity-0 transition-opacity hover:bg-red-50 hover:text-red-500 group-hover:opacity-100"
+                    title="Remove"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
+                )}
               </div>
             ))}
           </div>

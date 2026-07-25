@@ -79,16 +79,18 @@ export function ModelSelector({ models, value, onChange }: ModelSelectorProps) {
   )
 }
 
+export interface ModelCatalog {
+  models: AlfredModel[]
+  selectedId: string
+  setSelectedId: (id: string) => void
+}
+
 /**
  * Owns the model catalog and the selected id. The catalog is fetched from
  * the Hub (everything the firm can reach through the Vercel AI Gateway)
  * with a static fallback; the selection persists in localStorage.
  */
-export function useModelCatalog(): {
-  models: AlfredModel[]
-  selectedId: string
-  setSelectedId: (id: string) => void
-} {
+export function useModelCatalog(): ModelCatalog {
   const [models, setModels] = useState<AlfredModel[]>(FALLBACK_MODELS)
   const [selectedId, setSelected] = useState<string>(DEFAULT_MODEL_ID)
 
