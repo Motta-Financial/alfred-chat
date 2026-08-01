@@ -23,7 +23,7 @@ Browser
                ▼
 ┌─────────────────────────────────────────┐
 │  v0-motta-hub  (separate repo)          │
-│  Next.js, Vercel (app.motta.cpa)        │
+│  Next.js, Vercel (hub.motta.cpa)        │
 │                                         │
 │  POST /api/alfred/chat      AI stream   │
 │  GET  /api/alfred/conversations         │
@@ -44,7 +44,7 @@ Browser
 ```
 
 Auth cookies are set with `domain: .motta.cpa` so a session obtained on
-`alfred.motta.cpa` is automatically presented to `app.motta.cpa` on every
+`alfred.motta.cpa` is automatically presented to `hub.motta.cpa` on every
 request, and vice versa.
 
 ---
@@ -94,8 +94,8 @@ curl -sS "$NEXT_PUBLIC_ALFRED_STORAGE_SUPABASE_URL/rest/v1/<table>?select=id&lim
 |---|---|
 | `NEXT_PUBLIC_SUPABASE_URL` | Supabase project URL — same value as Hub |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase anon (public) key — same value as Hub |
-| `NEXT_PUBLIC_HUB_CHAT_URL` | `https://app.motta.cpa/api/alfred/chat` |
-| `NEXT_PUBLIC_HUB_CONVERSATIONS_URL` | `https://app.motta.cpa/api/alfred/conversations` |
+| `NEXT_PUBLIC_HUB_CHAT_URL` | `https://hub.motta.cpa/api/alfred/chat` |
+| `NEXT_PUBLIC_HUB_CONVERSATIONS_URL` | `https://hub.motta.cpa/api/alfred/conversations` |
 | `SUPABASE_COOKIE_DOMAIN` | `.motta.cpa` (note the leading dot) |
 
 ---
@@ -133,7 +133,7 @@ curl -sS "$NEXT_PUBLIC_ALFRED_STORAGE_SUPABASE_URL/rest/v1/<table>?select=id&lim
 
 Run through these steps after deploying both repos to production:
 
-1. **Health endpoint** — Open `https://app.motta.cpa/api/alfred/health` in a
+1. **Health endpoint** — Open `https://hub.motta.cpa/api/alfred/health` in a
    browser. Should return HTTP 200 with a JSON body. The green dot in the
    ALFRED header also confirms this.
 
@@ -151,7 +151,7 @@ Run through these steps after deploying both repos to production:
    cookies scoped to `.motta.cpa`.
 
 5. **Cross-subdomain cookie** — After step 4, open
-   `https://app.motta.cpa/api/alfred/whoami` in the same browser. Should
+   `https://hub.motta.cpa/api/alfred/whoami` in the same browser. Should
    return HTTP 200 with your user details (not 401). This confirms the shared
    cookie domain is working.
 
@@ -165,7 +165,7 @@ Run through these steps after deploying both repos to production:
 
 8. **Thread round-trip** — Click a conversation in the sidebar. The chat
    should hydrate with the historical messages. Send a follow-up message.
-   Open `https://app.motta.cpa` (Hub) — the same thread created on
+   Open `https://hub.motta.cpa` (Hub) — the same thread created on
    `alfred.motta.cpa` should appear in the Hub's conversation widget.
 
 ---
