@@ -388,10 +388,13 @@ export async function searchHubClients(term: string): Promise<HubClientHit[]> {
       .limit(6),
     supabase
       .from("contacts")
-      .select("id, full_name, email")
+      .select("id, full_name, primary_email")
       .ilike("full_name", pattern)
       .limit(6),
   ])
+
+  if (orgs.error) throw new Error(`Failed to search organizations: ${orgs.error.message}`)
+  if (contacts.error) throw new Error(`Failed to search contacts: ${contacts.error.message}`)
 
   const hits: HubClientHit[] = []
   for (const row of orgs.data ?? []) {
@@ -407,7 +410,7 @@ export async function searchHubClients(term: string): Promise<HubClientHit[]> {
       id: row.id as string,
       kind: "contact",
       name: (row.full_name as string) ?? "Unnamed contact",
-      detail: (row.email as string) ?? null,
+      detail: (row.primary_email as string) ?? null,
     })
   }
   return hits
@@ -450,15 +453,15 @@ export async function buildClientKnowledge(hit: HubClientHit): Promise<{ title: 
 
   const { data, error } = await supabase
     .from("contacts")
-    .select("full_name, email, phone_number, contact_type, city, state")
+    .select("full_name, primary_email, phone_primary, contact_type, city, state")
     .eq("id", hit.id)
     .single()
   if (error || !data) throw new Error("Could not load that contact.")
   const lines = [
     `Client contact: ${data.full_name ?? hit.name}`,
     data.contact_type ? `Type: ${data.contact_type}` : null,
-    data.email ? `Email: ${data.email}` : null,
-    data.phone_number ? `Phone: ${data.phone_number}` : null,
+    data.primary_email ? `Email: ${data.primary_email}` : null,
+    data.phone_primary ? `Phone: ${data.phone_primary}` : null,
     data.city || data.state ? `Location: ${[data.city, data.state].filter(Boolean).join(", ")}` : null,
   ].filter(Boolean)
   return {

@@ -6,7 +6,7 @@ import { LogoImage } from "@/components/alfred-chat/LogoImage"
 
 /**
  * ALFRED has no sign-in form of its own. Authentication is owned by the
- * Motta Hub at app.motta.cpa, and Supabase auth cookies are shared
+ * Motta Hub at hub.motta.cpa, and Supabase auth cookies are shared
  * across .motta.cpa via SUPABASE_COOKIE_DOMAIN.
  *
  * If a user lands here with an active session, send them straight to
@@ -20,6 +20,13 @@ export default async function LoginPage({
 }) {
   const { next, error } = await searchParams
 
+  // `next` is attacker-controlled (URL query param). Only accept an
+  // in-app relative path — anything else (protocol-relative `//evil.com`,
+  // userinfo tricks like `@evil.com`, absolute URLs) collapses to "/".
+  // Both uses below run unconditionally on every visit, not just the
+  // signed-in branch.
+  const safeNext = next && next.startsWith("/") && !next.startsWith("//") ? next : "/"
+
   const supabase = await createClient()
   const {
     data: { user },
@@ -27,14 +34,14 @@ export default async function LoginPage({
 
   // Already signed in via the shared Hub session -> straight into the app
   if (user) {
-    redirect(next ?? "/")
+    redirect(safeNext)
   }
 
   // Compute the return-to that the Hub should redirect us back to once
   // the user authenticates there. Fall back to the alfred origin root.
   const alfredOrigin =
     process.env.NEXT_PUBLIC_ALFRED_ORIGIN ?? "https://alfred.motta.cpa"
-  const returnTo = `${alfredOrigin}${next ?? "/"}`
+  const returnTo = `${alfredOrigin}${safeNext}`
   const hubLoginUrl = buildHubLoginUrl(returnTo)
 
   return (
