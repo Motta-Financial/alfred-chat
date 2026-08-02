@@ -5,27 +5,18 @@ import remarkGfm from "remark-gfm"
 import type { Components } from "react-markdown"
 import { Button } from "@/components/ui/button"
 import { Copy, Check } from "lucide-react"
-import { useState } from "react"
+import { memo, useState } from "react"
 
 interface MarkdownMessageProps {
   content: string
   isUser?: boolean
 }
 
-export function MarkdownMessage({ content, isUser = false }: MarkdownMessageProps) {
-  const [copied, setCopied] = useState(false)
+// Hoisted to module scope: these are static, and rebuilding them on every
+// render forces react-markdown to treat every element renderer as new.
+const remarkPlugins = [remarkGfm]
 
-  const handleCopy = async () => {
-    try {
-      await navigator.clipboard.writeText(content)
-      setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
-    } catch (err) {
-      console.error("[v0] Failed to copy:", err)
-    }
-  }
-
-  const components: Components = {
+const components: Components = {
     // Headers with proper hierarchy and styling
     h1: ({ children }) => (
       <h1 className="text-2xl font-bold mb-4 mt-6 text-foreground border-b border-border pb-2">{children}</h1>
@@ -106,12 +97,28 @@ export function MarkdownMessage({ content, isUser = false }: MarkdownMessageProp
     tr: ({ children }) => <tr className="border-b border-border">{children}</tr>,
     th: ({ children }) => <th className="border border-border px-3 py-2 text-left font-semibold">{children}</th>,
     td: ({ children }) => <td className="border border-border px-3 py-2">{children}</td>,
+}
+
+export const MarkdownMessage = memo(function MarkdownMessage({
+  content,
+  isUser = false,
+}: MarkdownMessageProps) {
+  const [copied, setCopied] = useState(false)
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(content)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    } catch (err) {
+      console.error("Failed to copy:", err)
+    }
   }
 
   return (
     <div className="relative group">
       <div className={`text-sm ${isUser ? "text-primary-foreground" : "text-foreground"}`}>
-        <ReactMarkdown remarkPlugins={[remarkGfm]} components={components}>
+        <ReactMarkdown remarkPlugins={remarkPlugins} components={components}>
           {content}
         </ReactMarkdown>
       </div>
@@ -128,4 +135,4 @@ export function MarkdownMessage({ content, isUser = false }: MarkdownMessageProp
       )}
     </div>
   )
-}
+})
