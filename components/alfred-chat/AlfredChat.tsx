@@ -10,6 +10,8 @@ import { MarkdownMessage } from "@/components/markdown-message"
 import { createClient } from "@/lib/supabase/client"
 import { getBearerToken, HUB_CHAT_URL, assertHubConfigured } from "@/lib/hub"
 import { ModelSelector, type ModelCatalog } from "@/components/alfred-chat/ModelSelector"
+import { DeepThinkToggle, useDeepThink } from "@/components/alfred-chat/DeepThinkToggle"
+import { getModelById } from "@/lib/models"
 import type { SupabaseClient } from "@supabase/supabase-js"
 
 type ConversationId = string | null
@@ -31,6 +33,11 @@ function makeTransport(
   supabase: SupabaseClient,
   getConversationId: () => ConversationId,
   getModelId: () => string,
+  // Returns true when "Deep think" is on AND the resolved model
+  // supports it. Threaded through as a getter (not a value) so the
+  // transport closure always reads the latest state without forcing a
+  // transport recreation on every toggle.
+  getThink: () => boolean,
   getProjectId: () => string | null,
 ) {
   return new DefaultChatTransport({
@@ -43,10 +50,16 @@ function makeTransport(
     },
     body: () => {
       const id = getConversationId()
+      const think = getThink()
       const projectId = getProjectId()
       return {
         audience: "staff",
         model: getModelId(),
+        // Only send `think` when on. The Hub treats `null` and `false`
+        // identically (no thinking), so omitting in the false case
+        // keeps the wire format minimal and matches what older clients
+        // send.
+        ...(think ? { think: true } : {}),
         ...(id ? { conversationId: id } : {}),
         ...(projectId ? { projectId } : {}),
       }
@@ -81,12 +94,43 @@ export function AlfredChat({
     modelIdRef.current = selectedModelId
   }, [selectedModelId])
 
+  // The live catalog (models) can grow after the Hub fetch resolves, so
+  // it's ref'd like the other transport-closure inputs above rather than
+  // captured once at the (one-time) transportRef init below.
+  const modelsRef = useRef(models)
+  useEffect(() => {
+    modelsRef.current = models
+  }, [models])
+
+  // Deep-think toggle. The capability check happens inside the getter
+  // so a stale toggle state with a non-thinking model still sends
+  // `think: false` -- the Hub's own capability check is the
+  // authoritative gate, this is just a UX nicety so the toggle
+  // visibly disables.
+  const [deepThink, setDeepThink] = useDeepThink()
+  const deepThinkRef = useRef<boolean>(deepThink)
+  useEffect(() => {
+    deepThinkRef.current = deepThink
+  }, [deepThink])
+
+  // Whether the currently-selected model supports thinking at all.
+  // Read off the capability flags in lib/models.ts. Drives the
+  // disabled state of <DeepThinkToggle/>.
+  const currentModel = getModelById(models, selectedModelId)
+  const thinkingAllowed = currentModel.capabilities.supportsThinking
+
   const transportRef = useRef<DefaultChatTransport<UIMessage> | null>(null)
   if (!transportRef.current) {
     transportRef.current = makeTransport(
       createClient(),
       () => conversationIdRef.current,
       () => modelIdRef.current,
+      // Gate `think` on the capability of whichever model the user has
+      // selected at send time. Belt and suspenders -- the Hub does the
+      // same check and ignores the field on unsupported models.
+      () =>
+        deepThinkRef.current &&
+        getModelById(modelsRef.current, modelIdRef.current).capabilities.supportsThinking,
       () => projectIdRef.current,
     )
   }
@@ -188,11 +232,18 @@ export function AlfredChat({
       {/* Input bar */}
       <div className="border-t border-gray-200 bg-white px-4 py-4">
         <div className="max-w-3xl mx-auto flex flex-col gap-2">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between gap-3">
             <span className="text-[11px] font-medium uppercase tracking-wider text-gray-400">
               Model
             </span>
-            <ModelSelector models={models} value={selectedModelId} onChange={setSelectedModelId} />
+            <div className="flex items-center gap-2">
+              <DeepThinkToggle
+                value={deepThink}
+                onChange={setDeepThink}
+                enabled={thinkingAllowed}
+              />
+              <ModelSelector models={models} value={selectedModelId} onChange={setSelectedModelId} />
+            </div>
           </div>
           <div className="flex items-end gap-3">
           <TextareaAutosize
