@@ -4,9 +4,18 @@
 // which reflects every model the firm can reach through the Vercel AI
 // Gateway. `fetchHubModels()` loads it at runtime; the static list below
 // is the fallback when the endpoint is unavailable (or not yet deployed)
-// and MUST stay in sync with the Hub's allowlist in
-// v0-motta-hub `lib/ai/models.ts` — the Hub validates `body.model` and
-// silently falls back to its admin-panel default on a mismatch.
+// and MUST stay in sync with `ALFRED_CHAT_MODELS` in v0-motta-hub
+// (`lib/ai/models.ts`) — the Hub validates `body.model` via
+// `isGatewayTextModel()` and silently falls back to its admin-panel
+// default on a mismatch. The IDs below are Vercel AI Gateway text-model
+// IDs; image models are intentionally excluded because this client
+// streams text/tool-use through `/api/alfred/chat`.
+//
+// Bump procedure when the firm adopts a new chat-capable model:
+//   1. Add the id to v0-motta-hub `lib/ai/models.ts` `ALFRED_CHAT_MODELS`.
+//   2. Add the matching entry to FALLBACK_MODELS below.
+//   3. Optionally update `DEFAULT_MODEL_ID` if the new model becomes
+//      the firm's general-purpose default.
 
 import { HUB_MODELS_URL } from "@/lib/hub"
 
@@ -39,6 +48,36 @@ export const FALLBACK_MODELS: AlfredModel[] = [
     label: "Claude Haiku 4.5",
     provider: "Anthropic",
     hint: "Fastest — quick lookups",
+  },
+  {
+    id: "openai/gpt-5.5-pro",
+    label: "GPT-5.5 Pro",
+    provider: "OpenAI",
+    hint: "OpenAI flagship — deepest reasoning",
+  },
+  {
+    id: "openai/gpt-5.5",
+    label: "GPT-5.5",
+    provider: "OpenAI",
+    hint: "Strong OpenAI general-purpose chat",
+  },
+  {
+    id: "openai/gpt-5",
+    label: "GPT-5",
+    provider: "OpenAI",
+    hint: "OpenAI reasoning and drafting",
+  },
+  {
+    id: "openai/gpt-5-mini",
+    label: "GPT-5 Mini",
+    provider: "OpenAI",
+    hint: "Fast OpenAI responses",
+  },
+  {
+    id: "openai/gpt-4o",
+    label: "GPT-4o",
+    provider: "OpenAI",
+    hint: "Compatibility model",
   },
 ]
 
