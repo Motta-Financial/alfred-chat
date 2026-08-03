@@ -10,7 +10,7 @@ function readHubUrl(name: string): string {
   if (!value || value.length === 0) {
     throw new Error(
       `[alfred-chat] Missing required env var ${name}. ` +
-        `Set it on the Vercel project (e.g. https://app.motta.cpa/api/alfred/...).`,
+        `Set it on the Vercel project (e.g. https://hub.motta.cpa/api/alfred/...).`,
     )
   }
   return value
@@ -28,7 +28,11 @@ export function assertHubConfigured(): void {
   readHubUrl("NEXT_PUBLIC_HUB_CONVERSATIONS_URL")
 }
 
-// Base URL of the Motta Hub (e.g. https://app.motta.cpa). Used to bounce
+/** Hub model-catalog endpoint (sibling of /chat), e.g.
+ *  https://hub.motta.cpa/api/alfred/models */
+export const HUB_MODELS_URL: string = HUB_CHAT_URL ? HUB_CHAT_URL.replace(/\/chat$/, "/models") : ""
+
+// Base URL of the Motta Hub (e.g. https://hub.motta.cpa). Used to bounce
 // unauthenticated visitors to the Hub's sign-in page so we never have to
 // run our own auth UI here.
 export const HUB_BASE_URL =
@@ -36,7 +40,7 @@ export const HUB_BASE_URL =
   // Fall back to deriving it from HUB_CHAT_URL: strip the /api/... suffix.
   (process.env.NEXT_PUBLIC_HUB_CHAT_URL
     ? new URL(process.env.NEXT_PUBLIC_HUB_CHAT_URL).origin
-    : "https://app.motta.cpa")
+    : "https://hub.motta.cpa")
 
 /**
  * Build the URL the user should be sent to when they need to sign in.
