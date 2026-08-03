@@ -1,15 +1,15 @@
 "use client"
 
-import { useCallback, useEffect, useRef, useState } from "react"
+import { memo, useCallback, useEffect, useRef, useState } from "react"
 import { useChat } from "@ai-sdk/react"
 import { DefaultChatTransport, isTextUIPart, isToolUIPart, type UIMessage } from "ai"
-import { Database, Send, Square } from "lucide-react"
+import { Database, Folder, Send, Square } from "lucide-react"
 import TextareaAutosize from "react-textarea-autosize"
 import { Button } from "@/components/ui/button"
 import { MarkdownMessage } from "@/components/markdown-message"
 import { createClient } from "@/lib/supabase/client"
-import { getBearerToken, HUB_CHAT_URL } from "@/lib/hub"
-import { ModelSelector, useSelectedModel } from "@/components/alfred-chat/ModelSelector"
+import { getBearerToken, HUB_CHAT_URL, assertHubConfigured } from "@/lib/hub"
+import { ModelSelector, type ModelCatalog } from "@/components/alfred-chat/ModelSelector"
 import { DeepThinkToggle, useDeepThink } from "@/components/alfred-chat/DeepThinkToggle"
 import { getModelById } from "@/lib/models"
 import type { SupabaseClient } from "@supabase/supabase-js"
@@ -18,8 +18,15 @@ type ConversationId = string | null
 
 interface AlfredChatProps {
   conversationId: ConversationId
+  /** Project this chat belongs to; sent to the Hub so it can inject the
+   *  project's instructions & knowledge into the system prompt. */
+  projectId?: string | null
+  projectName?: string | null
   onConversationId: (id: string) => void
+  onOpenProject?: () => void
   initialMessages?: UIMessage[]
+  /** Owned by ChatPage so navigation remounts don't refetch the catalog. */
+  modelCatalog: ModelCatalog
 }
 
 function makeTransport(
@@ -31,17 +38,20 @@ function makeTransport(
   // transport closure always reads the latest state without forcing a
   // transport recreation on every toggle.
   getThink: () => boolean,
+  getProjectId: () => string | null,
 ) {
   return new DefaultChatTransport({
     api: HUB_CHAT_URL,
     credentials: "omit",
     headers: async () => {
+      assertHubConfigured()
       const token = await getBearerToken(supabase)
       return { Authorization: `Bearer ${token}` }
     },
     body: () => {
       const id = getConversationId()
       const think = getThink()
+      const projectId = getProjectId()
       return {
         audience: "staff",
         model: getModelId(),
@@ -51,12 +61,21 @@ function makeTransport(
         // send.
         ...(think ? { think: true } : {}),
         ...(id ? { conversationId: id } : {}),
+        ...(projectId ? { projectId } : {}),
       }
     },
   })
 }
 
-export function AlfredChat({ conversationId, onConversationId, initialMessages }: AlfredChatProps) {
+export function AlfredChat({
+  conversationId,
+  projectId = null,
+  projectName = null,
+  onConversationId,
+  onOpenProject,
+  initialMessages,
+  modelCatalog,
+}: AlfredChatProps) {
   // Keep conversationId in a ref so the transport closure always reads the latest value
   // without needing to recreate the transport on every render.
   const conversationIdRef = useRef<ConversationId>(conversationId)
@@ -64,11 +83,24 @@ export function AlfredChat({ conversationId, onConversationId, initialMessages }
     conversationIdRef.current = conversationId
   }, [conversationId])
 
-  const [selectedModelId, setSelectedModelId] = useSelectedModel()
+  const projectIdRef = useRef<string | null>(projectId)
+  useEffect(() => {
+    projectIdRef.current = projectId
+  }, [projectId])
+
+  const { models, selectedId: selectedModelId, setSelectedId: setSelectedModelId } = modelCatalog
   const modelIdRef = useRef<string>(selectedModelId)
   useEffect(() => {
     modelIdRef.current = selectedModelId
   }, [selectedModelId])
+
+  // The live catalog (models) can grow after the Hub fetch resolves, so
+  // it's ref'd like the other transport-closure inputs above rather than
+  // captured once at the (one-time) transportRef init below.
+  const modelsRef = useRef(models)
+  useEffect(() => {
+    modelsRef.current = models
+  }, [models])
 
   // Deep-think toggle. The capability check happens inside the getter
   // so a stale toggle state with a non-thinking model still sends
@@ -84,10 +116,10 @@ export function AlfredChat({ conversationId, onConversationId, initialMessages }
   // Whether the currently-selected model supports thinking at all.
   // Read off the capability flags in lib/models.ts. Drives the
   // disabled state of <DeepThinkToggle/>.
-  const currentModel = getModelById(selectedModelId)
+  const currentModel = getModelById(models, selectedModelId)
   const thinkingAllowed = currentModel.capabilities.supportsThinking
 
-  const transportRef = useRef<DefaultChatTransport | null>(null)
+  const transportRef = useRef<DefaultChatTransport<UIMessage> | null>(null)
   if (!transportRef.current) {
     transportRef.current = makeTransport(
       createClient(),
@@ -98,20 +130,20 @@ export function AlfredChat({ conversationId, onConversationId, initialMessages }
       // same check and ignores the field on unsupported models.
       () =>
         deepThinkRef.current &&
-        getModelById(modelIdRef.current).capabilities.supportsThinking,
+        getModelById(modelsRef.current, modelIdRef.current).capabilities.supportsThinking,
+      () => projectIdRef.current,
     )
   }
 
   const { messages, setMessages, sendMessage, stop, status } = useChat({
     transport: transportRef.current,
     messages: initialMessages,
-    onData(dataParts) {
-      for (const part of dataParts) {
-        // Hub emits { type: 'data-conversation', id: <uuid> }
-        if ((part as { type?: string; id?: string }).type === "data-conversation") {
-          const id = (part as { type: string; id: string }).id
-          if (id) onConversationId(id)
-        }
+    onData(part) {
+      // Hub emits { type: 'data-conversation', id: <uuid> }. onData fires
+      // once per data part (not with an array of them).
+      if (part.type === "data-conversation") {
+        const id = (part as { type: string; id?: string }).id
+        if (id) onConversationId(id)
       }
     },
   })
@@ -121,21 +153,21 @@ export function AlfredChat({ conversationId, onConversationId, initialMessages }
   const bottomRef = useRef<HTMLDivElement>(null)
   const isStreaming = status === "streaming" || status === "submitted"
 
-  // Auto-scroll to bottom when messages change
+  // Auto-scroll to bottom when messages change. Instant while streaming —
+  // a smooth scroll per token fights the next token's scroll and janks.
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" })
-  }, [messages])
+    bottomRef.current?.scrollIntoView({ behavior: isStreaming ? "auto" : "smooth" })
+  }, [messages, isStreaming])
 
   // Focus input on mount
   useEffect(() => {
     inputRef.current?.focus()
   }, [])
 
-  // Reset messages when initialMessages prop changes (conversation switch)
+  // Reset messages when initialMessages prop changes: hydrate on
+  // conversation switch, clear on "New chat" (undefined).
   useEffect(() => {
-    if (initialMessages) {
-      setMessages(initialMessages)
-    }
+    setMessages(initialMessages ?? [])
   }, [initialMessages, setMessages])
 
   const handleSend = useCallback(async () => {
@@ -154,12 +186,31 @@ export function AlfredChat({ conversationId, onConversationId, initialMessages }
 
   return (
     <div className="flex flex-col h-full">
+      {/* Project context banner */}
+      {projectName && (
+        <button
+          onClick={onOpenProject}
+          className="flex items-center gap-2 border-b border-[#8E9B79]/30 bg-[#8E9B79]/10 px-4 py-2 text-left transition-colors hover:bg-[#8E9B79]/20"
+          title="Open project"
+        >
+          <Folder className="h-3.5 w-3.5 flex-shrink-0 text-[#6B745D]" />
+          <span className="truncate text-xs font-medium text-[#4a5240]">{projectName}</span>
+          <span className="text-xs text-[#4a5240]/60">
+            — project instructions &amp; knowledge apply
+          </span>
+        </button>
+      )}
+
       {/* Message list */}
       <div className="flex-1 overflow-y-auto px-4 py-6 space-y-6">
         {messages.length === 0 && (
           <div className="flex flex-col items-center justify-center h-full gap-3 text-gray-400">
             <p className="text-lg font-medium">How can I help you today?</p>
-            <p className="text-sm">Start a conversation with ALFRED.</p>
+            <p className="text-sm">
+              {projectName
+                ? `Start a conversation in ${projectName}.`
+                : "Start a conversation with ALFRED."}
+            </p>
           </div>
         )}
 
@@ -191,7 +242,7 @@ export function AlfredChat({ conversationId, onConversationId, initialMessages }
                 onChange={setDeepThink}
                 enabled={thinkingAllowed}
               />
-              <ModelSelector value={selectedModelId} onChange={setSelectedModelId} />
+              <ModelSelector models={models} value={selectedModelId} onChange={setSelectedModelId} />
             </div>
           </div>
           <div className="flex items-end gap-3">
@@ -234,7 +285,10 @@ export function AlfredChat({ conversationId, onConversationId, initialMessages }
   )
 }
 
-function MessageRow({ message }: { message: UIMessage }) {
+// Memoized: while a response streams, only the message being appended to
+// changes identity — every completed row skips re-rendering (and skips
+// re-running react-markdown, the expensive part) on each token.
+const MessageRow = memo(function MessageRow({ message }: { message: UIMessage }) {
   const isUser = message.role === "user"
 
   return (
@@ -257,11 +311,12 @@ function MessageRow({ message }: { message: UIMessage }) {
             )
           }
 
-          if (isToolUIPart(part) || part.type === "dynamic-tool") {
+          const partType: string = part.type
+          if (isToolUIPart(part) || partType === "dynamic-tool") {
             const toolName =
-              part.type === "dynamic-tool"
-                ? (part as { toolName: string }).toolName
-                : part.type.replace(/^tool-/, "")
+              partType === "dynamic-tool"
+                ? (part as unknown as { toolName: string }).toolName
+                : partType.replace(/^tool-/, "")
             return (
               <span
                 key={i}
@@ -278,4 +333,4 @@ function MessageRow({ message }: { message: UIMessage }) {
       </div>
     </div>
   )
-}
+})

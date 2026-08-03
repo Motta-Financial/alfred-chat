@@ -11,20 +11,28 @@ const PING_INTERVAL_MS = 60_000
 export function HealthDot() {
   const [status, setStatus] = useState<Status>("unknown")
 
-  async function ping() {
-    if (!HEALTH_URL) return
-    try {
-      const res = await fetch(HEALTH_URL, { cache: "no-store" })
-      setStatus(res.ok ? "ok" : "error")
-    } catch {
-      setStatus("error")
-    }
-  }
-
   useEffect(() => {
+    if (!HEALTH_URL) return
+
+    async function ping() {
+      // Don't burn requests while the tab is in the background.
+      if (document.hidden) return
+      try {
+        const res = await fetch(HEALTH_URL, { cache: "no-store" })
+        setStatus(res.ok ? "ok" : "error")
+      } catch {
+        setStatus("error")
+      }
+    }
+
     ping()
     const id = setInterval(ping, PING_INTERVAL_MS)
-    return () => clearInterval(id)
+    // Refresh immediately when the user returns to the tab.
+    document.addEventListener("visibilitychange", ping)
+    return () => {
+      clearInterval(id)
+      document.removeEventListener("visibilitychange", ping)
+    }
   }, [])
 
   const color =
