@@ -3,57 +3,78 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* ------------------------------------------------------------------ */
+/* ALFRED — "the private study"                                        */
+/* Deep ink-green chrome, warm parchment canvas, brass hairlines.      */
+/* Fraunces (display serif) + Instrument Sans (UI).                    */
+/* ------------------------------------------------------------------ */
+
 :root {
-  /* Updated to sophisticated beige with digital tech aesthetic */
-  --background: 234 232 225; /* #EAE8E1 - Light beige */
-  --foreground: 30 30 30; /* Darker for better contrast */
+  /* shadcn token layer (r g b channels) */
+  --background: 246 244 236; /* parchment  #F6F4EC */
+  --foreground: 34 33 27; /* warm ink   #22211B */
 
-  --card: 248 246 240; /* Lighter beige for elevated cards */
-  --card-foreground: 30 30 30;
+  --card: 253 252 248; /* raised paper #FDFCF8 */
+  --card-foreground: 34 33 27;
 
-  --popover: 248 246 240;
-  --popover-foreground: 30 30 30;
+  --popover: 253 252 248;
+  --popover-foreground: 34 33 27;
 
-  /* Enhanced Motta Green with more vibrant digital feel */
-  --primary: 107 116 93; /* #6B745D - Motta Green */
-  --primary-foreground: 255 255 255;
+  --primary: 95 106 81; /* moss #5F6A51 */
+  --primary-foreground: 246 244 236;
 
-  --secondary: 215 213 205; /* Subtle beige */
-  --secondary-foreground: 30 30 30;
+  --secondary: 232 228 216;
+  --secondary-foreground: 34 33 27;
 
-  --muted: 225 223 215; /* Muted beige */
-  --muted-foreground: 100 100 100;
+  --muted: 236 233 223;
+  --muted-foreground: 110 107 96; /* #6E6B60 */
 
-  --accent: 95 105 82; /* Deeper green accent */
-  --accent-foreground: 255 255 255;
+  --accent: 142 155 121; /* sage #8E9B79 */
+  --accent-foreground: 34 33 27;
 
-  --destructive: 220 38 38;
+  --destructive: 178 58 48;
   --destructive-foreground: 255 255 255;
 
-  --border: 215 213 205; /* Subtle borders */
-  --input: 248 246 240;
-  --ring: 107 116 93;
+  --border: 228 224 211; /* hairline #E4E0D3 */
+  --input: 253 252 248;
+  --ring: 142 155 121;
 
-  --chart-1: 107 116 93;
-  --chart-2: 140 150 130;
-  --chart-3: 90 100 80;
-  --chart-4: 160 170 150;
+  --chart-1: 95 106 81;
+  --chart-2: 142 155 121;
+  --chart-3: 180 155 108;
+  --chart-4: 73 82 62;
   --chart-5: 120 130 110;
 
-  --radius: 0.75rem;
-  --sidebar: 248 246 240;
-  --sidebar-foreground: 30 30 30;
-  --sidebar-primary: 107 116 93;
-  --sidebar-primary-foreground: 255 255 255;
-  --sidebar-accent: 225 223 215;
-  --sidebar-accent-foreground: 30 30 30;
-  --sidebar-border: 215 213 205;
-  --sidebar-ring: 107 116 93;
+  --radius: 0.9rem;
+
+  --sidebar: 23 28 20;
+  --sidebar-foreground: 237 234 224;
+  --sidebar-primary: 142 155 121;
+  --sidebar-primary-foreground: 23 28 20;
+  --sidebar-accent: 38 46 32;
+  --sidebar-accent-foreground: 237 234 224;
+  --sidebar-border: 52 60 44;
+  --sidebar-ring: 142 155 121;
 }
 
 @theme inline {
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-instrument), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-fraunces), Georgia, "Times New Roman", serif;
+  --font-mono: var(--font-jbmono), ui-monospace, "SF Mono", monospace;
+
+  /* First-class palette — bg-ink, text-ivory/60, border-brass/20, … */
+  --color-ink: #171c14;
+  --color-ink-2: #1e241a;
+  --color-ink-3: #262e20;
+  --color-paper: #f6f4ec;
+  --color-paper-2: #fdfcf8;
+  --color-line: #e4e0d3;
+  --color-ivory: #edeae0;
+  --color-sage: #8e9b79;
+  --color-moss: #5f6a51;
+  --color-moss-deep: #49523e;
+  --color-brass: #b49b6c;
+
   --color-background: rgb(var(--background));
   --color-foreground: rgb(var(--foreground));
   --color-card: rgb(var(--card));
@@ -90,52 +111,114 @@
   --color-sidebar-accent-foreground: rgb(var(--sidebar-accent-foreground));
   --color-sidebar-border: rgb(var(--sidebar-border));
   --color-sidebar-ring: rgb(var(--sidebar-ring));
+
+  /* Motion */
+  --animate-msg-in: msg-in 0.45s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  --animate-aura: aura 3.2s ease-in-out infinite;
+  --animate-glow-dot: glow-dot 2.4s ease-in-out infinite;
+
+  @keyframes msg-in {
+    from {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes aura {
+    0%,
+    100% {
+      transform: scale(1);
+      opacity: 0.55;
+    }
+    50% {
+      transform: scale(1.4);
+      opacity: 0.15;
+    }
+  }
+
+  @keyframes glow-dot {
+    0%,
+    100% {
+      box-shadow: 0 0 4px 1px rgba(110, 231, 183, 0.55);
+    }
+    50% {
+      box-shadow: 0 0 10px 2px rgba(110, 231, 183, 0.85);
+    }
+  }
+}
+
+@keyframes shimmer-x {
+  from {
+    background-position: 200% 50%;
+  }
+  to {
+    background-position: -200% 50%;
+  }
 }
 
 @layer base {
   * {
     @apply border-border outline-ring/50;
   }
+
+  html {
+    /* Thin, quiet scrollbars everywhere */
+    scrollbar-width: thin;
+    scrollbar-color: rgba(23, 28, 20, 0.18) transparent;
+  }
+
   body {
-    @apply bg-background text-foreground;
+    @apply bg-paper text-foreground;
+    font-feature-settings: "ss01", "cv01";
   }
 
-  /* Added subtle digital grid pattern background */
-  body::before {
-    content: "";
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-image: linear-gradient(rgba(107, 116, 93, 0.03) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(107, 116, 93, 0.03) 1px, transparent 1px);
-    background-size: 50px 50px;
-    pointer-events: none;
-    z-index: 0;
-  }
-
-  /* Ensure content appears above grid */
-  body > * {
-    position: relative;
-    z-index: 1;
+  ::selection {
+    background: rgba(142, 155, 121, 0.35);
   }
 }
 
-/* Added modern glassmorphism effect for cards */
 @layer utilities {
-  .glass-card {
-    background: rgba(248, 246, 240, 0.8);
-    backdrop-filter: blur(10px);
-    border: 1px solid rgba(215, 213, 205, 0.5);
+  /* Dark chrome (header / sidebar) gets ivory scrollbars + a whisper of grain */
+  .dark-rail {
+    scrollbar-color: rgba(237, 234, 224, 0.16) transparent;
   }
 
-  .tech-glow {
-    box-shadow: 0 0 20px rgba(107, 116, 93, 0.1);
+  .grain {
+    position: relative;
+  }
+  .grain::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0.05;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E");
   }
 
-  .digital-border {
-    border: 1px solid rgba(107, 116, 93, 0.2);
-    box-shadow: inset 0 0 0 1px rgba(107, 116, 93, 0.05);
+  /* Brass-threaded shimmer for "thinking" copy */
+  .shimmer-text {
+    background: linear-gradient(
+      90deg,
+      #6e6b60 0%,
+      #b49b6c 40%,
+      #8e9b79 60%,
+      #6e6b60 100%
+    );
+    background-size: 200% 100%;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    animation: shimmer-x 2.4s linear infinite;
+  }
+
+  /* Premium raised-card shadow tuned to the warm palette */
+  .shadow-console {
+    box-shadow:
+      0 1px 2px rgba(23, 28, 20, 0.05),
+      0 10px 30px -12px rgba(23, 28, 20, 0.18);
   }
 }

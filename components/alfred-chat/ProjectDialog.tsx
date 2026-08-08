@@ -64,18 +64,18 @@ export function ProjectDialog({ open, project, onClose, onSaved }: ProjectDialog
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-ink/60 p-4 backdrop-blur-sm"
       onClick={onClose}
       role="dialog"
       aria-modal="true"
       aria-label={project ? "Edit project" : "Create project"}
     >
       <div
-        className="w-full max-w-lg rounded-2xl bg-white shadow-xl"
+        className="w-full max-w-lg rounded-2xl border border-line bg-paper-2 shadow-console"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between border-b border-gray-100 px-6 py-4">
-          <h2 className="text-base font-semibold text-gray-900">
+        <div className="flex items-center justify-between border-b border-line px-6 py-4">
+          <h2 className="font-display text-lg font-semibold text-foreground">
             {project ? "Edit project" : "Create a project"}
           </h2>
           <button
@@ -98,7 +98,7 @@ export function ProjectDialog({ open, project, onClose, onSaved }: ProjectDialog
               onChange={(e) => setName(e.target.value)}
               placeholder="e.g. Acme Corp 2026 tax planning"
               autoFocus
-              className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm outline-none transition-colors focus:border-[#8E9B79] focus:ring-2 focus:ring-[#8E9B79]/20"
+              className="w-full rounded-lg border border-line bg-paper px-3 py-2 text-sm outline-none transition-colors focus:border-sage focus:ring-2 focus:ring-sage/20"
             />
           </div>
 
@@ -111,7 +111,7 @@ export function ProjectDialog({ open, project, onClose, onSaved }: ProjectDialog
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="What is this project about?"
-              className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm outline-none transition-colors focus:border-[#8E9B79] focus:ring-2 focus:ring-[#8E9B79]/20"
+              className="w-full rounded-lg border border-line bg-paper px-3 py-2 text-sm outline-none transition-colors focus:border-sage focus:ring-2 focus:ring-sage/20"
             />
           </div>
 
@@ -127,19 +127,19 @@ export function ProjectDialog({ open, project, onClose, onSaved }: ProjectDialog
               placeholder={
                 "Tell ALFRED how to behave in this project.\ne.g. You are helping with Acme Corp's S-corp return. Always cite IRC sections. The client's fiscal year ends June 30."
               }
-              className="w-full resize-y rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm outline-none transition-colors focus:border-[#8E9B79] focus:ring-2 focus:ring-[#8E9B79]/20"
+              className="w-full resize-y rounded-lg border border-line bg-paper px-3 py-2 text-sm outline-none transition-colors focus:border-sage focus:ring-2 focus:ring-sage/20"
             />
             <p className="text-xs text-gray-400">
               Applied to every chat in this project, like Claude project instructions.
             </p>
           </div>
 
-          <label className="flex items-start gap-2.5 rounded-lg border border-gray-100 bg-gray-50/60 px-3 py-2.5">
+          <label className="flex items-start gap-2.5 rounded-lg border border-line bg-muted/40 px-3 py-2.5">
             <input
               type="checkbox"
               checked={shared}
               onChange={(e) => setShared(e.target.checked)}
-              className="mt-0.5 h-4 w-4 accent-[#6B745D]"
+              className="mt-0.5 h-4 w-4 accent-moss"
             />
             <span className="text-sm text-gray-700">
               Share with the team
@@ -150,14 +150,14 @@ export function ProjectDialog({ open, project, onClose, onSaved }: ProjectDialog
           </label>
         </div>
 
-        <div className="flex justify-end gap-2 border-t border-gray-100 px-6 py-4">
+        <div className="flex justify-end gap-2 border-t border-line px-6 py-4">
           <Button variant="outline" onClick={onClose} className="border-gray-200">
             Cancel
           </Button>
           <Button
             onClick={handleSave}
             disabled={saving || !name.trim()}
-            className="bg-[#6B745D] text-white hover:bg-[#4a5240]"
+            className="bg-ink text-ivory hover:bg-moss-deep"
           >
             {saving ? "Saving…" : project ? "Save changes" : "Create project"}
           </Button>

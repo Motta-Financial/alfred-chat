@@ -1,13 +1,18 @@
 import type { Metadata } from "next"
-import { Inter } from "next/font/google"
+import { Fraunces, Instrument_Sans, JetBrains_Mono } from "next/font/google"
 import { Analytics } from "@vercel/analytics/next"
 import { Toaster } from "sonner"
 import "./globals.css"
 import { HealthDot } from "@/components/alfred-chat/HealthDot"
 import { LogoImage } from "@/components/alfred-chat/LogoImage"
-import { Sparkles } from "lucide-react"
 
-const inter = Inter({ subsets: ["latin"], variable: "--font-inter" })
+const fraunces = Fraunces({
+  subsets: ["latin"],
+  variable: "--font-fraunces",
+  axes: ["opsz", "SOFT", "WONK"],
+})
+const instrument = Instrument_Sans({ subsets: ["latin"], variable: "--font-instrument" })
+const jbMono = JetBrains_Mono({ subsets: ["latin"], variable: "--font-jbmono" })
 
 export const metadata: Metadata = {
   title: "ALFRED · Motta",
@@ -18,30 +23,34 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en">
       <body
-        className={`${inter.variable} font-sans antialiased bg-[#EAE6E1] text-gray-900 h-screen flex flex-col`}
+        className={`${fraunces.variable} ${instrument.variable} ${jbMono.variable} font-sans antialiased bg-paper text-foreground h-screen flex flex-col`}
       >
-        {/* Top header bar */}
-        <header className="flex items-center justify-between px-6 py-3 bg-[#6B745D] shadow-sm flex-shrink-0">
+        {/* Dark chrome header — reads as one rail with the sidebar below it */}
+        <header className="grain flex flex-shrink-0 items-center justify-between border-b border-brass/15 bg-ink px-5 py-3">
           <div className="flex items-center gap-3">
-            <div className="relative w-8 h-8 rounded-full overflow-hidden bg-white/20 flex items-center justify-center">
-              <LogoImage size={28} className="object-contain" />
+            <div className="relative flex h-9 w-9 items-center justify-center rounded-full bg-ink-3 ring-1 ring-brass/40">
+              <span
+                aria-hidden
+                className="absolute font-display text-[15px] leading-none text-ivory/90"
+              >
+                A
+              </span>
+              <LogoImage size={30} className="relative rounded-full object-contain" />
             </div>
-            <div className="flex items-center gap-1.5">
-              <Sparkles className="w-4 h-4 text-white/80" />
-              <span className="font-semibold text-white tracking-tight">ALFRED</span>
-              <span className="text-white/60 text-sm font-normal">· Motta Hub Assistant</span>
+            <div className="flex items-baseline gap-2.5">
+              <span className="font-display text-xl leading-none tracking-wide text-ivory">
+                ALFRED
+              </span>
+              <span className="hidden text-[11px] uppercase tracking-[0.22em] text-ivory/40 sm:inline">
+                Motta Hub Assistant
+              </span>
             </div>
           </div>
           <HealthDot />
         </header>
 
         {/* Page content */}
-        <main className="flex-1 min-h-0 bg-white">{children}</main>
-
-        {/* Small footer */}
-        <footer className="flex-shrink-0 text-center py-2 text-xs text-gray-400 bg-[#EAE6E1]">
-          © {new Date().getFullYear()} Motta Financial · Internal use only
-        </footer>
+        <main className="min-h-0 flex-1 bg-paper">{children}</main>
 
         <Toaster richColors position="top-right" />
         <Analytics />

@@ -17,13 +17,13 @@ interface MarkdownMessageProps {
 const remarkPlugins = [remarkGfm]
 
 const components: Components = {
-    // Headers with proper hierarchy and styling
+    // Headers — display serif for an editorial, printed feel
     h1: ({ children }) => (
-      <h1 className="text-2xl font-bold mb-4 mt-6 text-foreground border-b border-border pb-2">{children}</h1>
+      <h1 className="font-display text-2xl font-semibold tracking-tight mb-4 mt-6 border-b border-border pb-2">{children}</h1>
     ),
-    h2: ({ children }) => <h2 className="text-xl font-semibold mb-3 mt-5 text-foreground">{children}</h2>,
-    h3: ({ children }) => <h3 className="text-lg font-semibold mb-2 mt-4 text-foreground">{children}</h3>,
-    h4: ({ children }) => <h4 className="text-base font-semibold mb-2 mt-3 text-foreground">{children}</h4>,
+    h2: ({ children }) => <h2 className="font-display text-xl font-semibold tracking-tight mb-3 mt-5">{children}</h2>,
+    h3: ({ children }) => <h3 className="font-display text-lg font-semibold tracking-tight mb-2 mt-4">{children}</h3>,
+    h4: ({ children }) => <h4 className="text-base font-semibold mb-2 mt-3">{children}</h4>,
 
     // Paragraphs with proper spacing
     p: ({ children, node }) => {
@@ -32,8 +32,9 @@ const components: Components = {
       return <p className={`leading-relaxed ${isInListItem ? "inline" : "mb-3 last:mb-0"}`}>{children}</p>
     },
 
-    // Strong/bold text
-    strong: ({ children }) => <strong className="font-semibold text-foreground">{children}</strong>,
+    // Strong/bold text — inherits color so it stays legible inside the
+    // dark user bubble as well as on the paper canvas.
+    strong: ({ children }) => <strong className="font-semibold">{children}</strong>,
 
     // Emphasis/italic text
     em: ({ children }) => <em className="italic">{children}</em>,
@@ -59,25 +60,25 @@ const components: Components = {
       </a>
     ),
 
-    // Blockquotes
+    // Blockquotes — brass thread, like a margin note
     blockquote: ({ children }) => (
-      <blockquote className="border-l-4 border-primary/30 pl-4 py-2 my-3 italic text-muted-foreground bg-muted/30 rounded-r">
+      <blockquote className="border-l-2 border-brass/60 pl-4 py-1 my-3 italic text-muted-foreground">
         {children}
       </blockquote>
     ),
 
-    // Code blocks
+    // Code blocks — dark ink panels on the paper canvas
     code: ({ className, children }) => {
       const isInline = !className
       if (isInline) {
         return (
-          <code className="bg-muted px-1.5 py-0.5 rounded text-sm font-mono text-foreground border border-border">
+          <code className="bg-muted px-1.5 py-0.5 rounded-md text-[0.85em] font-mono border border-border">
             {children}
           </code>
         )
       }
       return (
-        <code className="block bg-muted p-3 rounded text-sm font-mono overflow-x-auto my-3 border border-border">
+        <code className="block bg-ink text-ivory p-4 rounded-xl text-[13px] leading-relaxed font-mono overflow-x-auto my-3">
           {children}
         </code>
       )
@@ -117,7 +118,7 @@ export const MarkdownMessage = memo(function MarkdownMessage({
 
   return (
     <div className="relative group">
-      <div className={`text-sm ${isUser ? "text-primary-foreground" : "text-foreground"}`}>
+      <div className={isUser ? "text-sm text-ivory" : "text-[15px] text-foreground"}>
         <ReactMarkdown remarkPlugins={remarkPlugins} components={components}>
           {content}
         </ReactMarkdown>

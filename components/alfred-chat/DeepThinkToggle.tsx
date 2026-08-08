@@ -41,12 +41,12 @@ export function DeepThinkToggle({ value, onChange, enabled }: DeepThinkTogglePro
       disabled={!enabled}
       onClick={() => onChange(!value)}
       className={cn(
-        "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium transition-colors",
-        "focus:outline-none focus:ring-2 focus:ring-[#8E9B79]/30",
+        "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1.5 text-xs font-medium transition-colors",
+        "focus:outline-none focus:ring-2 focus:ring-sage/30",
         "disabled:cursor-not-allowed disabled:opacity-40",
         isOn
-          ? "border-[#6B745D] bg-[#6B745D] text-white hover:bg-[#4a5240]"
-          : "border-gray-200 bg-white text-gray-600 hover:border-[#8E9B79]/60",
+          ? "border-ink bg-ink text-ivory hover:bg-moss-deep"
+          : "border-transparent bg-transparent text-muted-foreground hover:bg-muted hover:text-foreground",
       )}
     >
       <Brain className="h-3.5 w-3.5" aria-hidden />

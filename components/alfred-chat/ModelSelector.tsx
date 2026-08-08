@@ -46,26 +46,28 @@ export function ModelSelector({ models, value, onChange }: ModelSelectorProps) {
     <Select value={current.id} onValueChange={onChange}>
       <SelectTrigger
         size="sm"
-        className="h-8 w-auto min-w-[180px] gap-2 border-gray-200 bg-white text-xs font-medium text-gray-700 hover:border-[#8E9B79]/60 focus:ring-[#8E9B79]/30"
+        className="h-8 w-auto gap-2 rounded-full border-transparent bg-transparent text-xs font-medium text-muted-foreground shadow-none hover:bg-muted hover:text-foreground focus:ring-sage/30"
         aria-label="Select AI model"
       >
-        <Sparkles className="h-3.5 w-3.5 text-[#6B745D]" aria-hidden />
-        <SelectValue />
+        <Sparkles className="h-3.5 w-3.5 text-moss" aria-hidden />
+        {/* Render only the label — the stacked label+hint block belongs in
+            the dropdown, not the slim console row. */}
+        <SelectValue>{current.label}</SelectValue>
       </SelectTrigger>
       <SelectContent align="end" className="max-h-[400px]">
         {Object.entries(grouped).map(([provider, providerModels]) => (
           <SelectGroup key={provider}>
-            <SelectLabel className="text-[10px] font-semibold uppercase tracking-wider text-gray-400">
+            <SelectLabel className="text-[10px] font-medium uppercase tracking-[0.18em] text-muted-foreground/70">
               {provider}
             </SelectLabel>
             {providerModels.map((model) => (
               <SelectItem key={model.id} value={model.id} className="py-2">
                 <div className="flex flex-col gap-0.5">
-                  <span className="text-sm font-medium text-gray-800">
+                  <span className="text-sm font-medium text-foreground">
                     {model.label}
                   </span>
                   {model.hint && (
-                    <span className="text-[11px] text-gray-400">
+                    <span className="text-[11px] text-muted-foreground">
                       {model.hint}
                     </span>
                   )}

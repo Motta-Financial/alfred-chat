@@ -144,11 +144,11 @@ export function ProjectView({
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0">
             <div className="flex items-center gap-2">
-              <h1 className="truncate text-2xl font-semibold tracking-tight text-gray-900">
+              <h1 className="truncate font-display text-3xl font-semibold tracking-tight text-foreground">
                 {project.name}
               </h1>
               {project.visibility === "team" && (
-                <span className="inline-flex items-center gap-1 rounded-full bg-[#8E9B79]/15 px-2 py-0.5 text-[11px] font-medium text-[#4a5240]">
+                <span className="inline-flex items-center gap-1 rounded-full bg-sage/20 px-2 py-0.5 text-[11px] font-medium text-moss-deep">
                   <Users className="h-3 w-3" /> Team
                 </span>
               )}
@@ -182,23 +182,23 @@ export function ProjectView({
         {/* New chat CTA */}
         <Button
           onClick={onNewChat}
-          className="mt-6 w-full justify-center gap-2 rounded-xl bg-[#6B745D] py-5 text-white hover:bg-[#4a5240]"
+          className="mt-6 w-full justify-center gap-2 rounded-xl bg-ink py-5 text-ivory hover:bg-moss-deep"
         >
           <Plus className="h-4 w-4" /> New chat in this project
         </Button>
 
         {/* Instructions */}
         <section className="mt-8">
-          <div className="flex items-center gap-2 text-sm font-semibold text-gray-800">
-            <FileText className="h-4 w-4 text-[#6B745D]" /> Custom instructions
+          <div className="flex items-center gap-2 font-display text-[15px] font-semibold text-foreground">
+            <FileText className="h-4 w-4 text-moss" /> Custom instructions
           </div>
-          <div className="mt-2 rounded-xl border border-gray-100 bg-[#F4F1ED]/60 px-4 py-3">
+          <div className="mt-2 rounded-xl border border-line bg-muted/50 px-4 py-3">
             {project.instructions ? (
               <p className="whitespace-pre-wrap text-sm leading-relaxed text-gray-700">
                 {project.instructions}
               </p>
             ) : isOwner ? (
-              <button onClick={onEdit} className="text-sm text-gray-400 hover:text-[#6B745D]">
+              <button onClick={onEdit} className="text-sm text-gray-400 hover:text-moss">
                 No instructions yet — click to add how ALFRED should behave in this project.
               </button>
             ) : (
@@ -210,8 +210,8 @@ export function ProjectView({
         {/* Knowledge */}
         <section className="mt-8">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2 text-sm font-semibold text-gray-800">
-              <BookOpen className="h-4 w-4 text-[#6B745D]" /> Project knowledge
+            <div className="flex items-center gap-2 font-display text-[15px] font-semibold text-foreground">
+              <BookOpen className="h-4 w-4 text-moss" /> Project knowledge
             </div>
             {isOwner && (
               <div className="flex gap-1.5">
@@ -288,14 +288,14 @@ export function ProjectView({
             {knowledge.map((row) => (
               <div
                 key={row.id}
-                className="group flex items-start justify-between gap-3 rounded-xl border border-gray-100 bg-white px-4 py-3 shadow-sm"
+                className="group flex items-start justify-between gap-3 rounded-xl border border-line bg-paper-2 px-4 py-3 shadow-sm"
               >
                 <div className="min-w-0">
                   <div className="flex items-center gap-1.5 text-sm font-medium text-gray-800">
                     {row.source_type === "hub_client" ? (
-                      <Building2 className="h-3.5 w-3.5 flex-shrink-0 text-[#6B745D]" />
+                      <Building2 className="h-3.5 w-3.5 flex-shrink-0 text-moss" />
                     ) : (
-                      <FileText className="h-3.5 w-3.5 flex-shrink-0 text-[#6B745D]" />
+                      <FileText className="h-3.5 w-3.5 flex-shrink-0 text-moss" />
                     )}
                     <span className="truncate">{row.title}</span>
                   </div>
@@ -319,8 +319,8 @@ export function ProjectView({
 
         {/* Chats in this project */}
         <section className="mt-8 pb-10">
-          <div className="flex items-center gap-2 text-sm font-semibold text-gray-800">
-            <MessageSquare className="h-4 w-4 text-[#6B745D]" /> Chats
+          <div className="flex items-center gap-2 font-display text-[15px] font-semibold text-foreground">
+            <MessageSquare className="h-4 w-4 text-moss" /> Chats
           </div>
           <div className="mt-3 space-y-1">
             {conversations.length === 0 && (
@@ -333,7 +333,7 @@ export function ProjectView({
                 key={conv.id}
                 onClick={() => onOpenConversation(conv.id)}
                 disabled={loadingConversationId === conv.id}
-                className="flex w-full items-center justify-between gap-3 rounded-lg px-3 py-2.5 text-left transition-colors hover:bg-[#F4F1ED]"
+                className="flex w-full items-center justify-between gap-3 rounded-lg px-3 py-2.5 text-left transition-colors hover:bg-muted"
               >
                 <span className="truncate text-sm text-gray-700">
                   {conv.title || "Untitled conversation"}
@@ -383,20 +383,20 @@ function AddTextKnowledge({
   }
 
   return (
-    <div className="mt-3 space-y-2 rounded-xl border border-[#8E9B79]/40 bg-[#8E9B79]/5 p-4">
+    <div className="mt-3 space-y-2 rounded-xl border border-sage/50 bg-sage/10 p-4">
       <input
         value={title}
         onChange={(e) => setTitle(e.target.value)}
         placeholder="Title (e.g. Engagement letter summary)"
         autoFocus
-        className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm outline-none focus:border-[#8E9B79] focus:ring-2 focus:ring-[#8E9B79]/20"
+        className="w-full rounded-lg border border-line bg-paper-2 px-3 py-2 text-sm outline-none focus:border-sage focus:ring-2 focus:ring-sage/20"
       />
       <textarea
         value={content}
         onChange={(e) => setContent(e.target.value)}
         rows={5}
         placeholder="Paste reference text, notes, requirements…"
-        className="w-full resize-y rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm outline-none focus:border-[#8E9B79] focus:ring-2 focus:ring-[#8E9B79]/20"
+        className="w-full resize-y rounded-lg border border-line bg-paper-2 px-3 py-2 text-sm outline-none focus:border-sage focus:ring-2 focus:ring-sage/20"
       />
       <div className="flex justify-end gap-2">
         <Button variant="outline" size="sm" onClick={onCancel} className="border-gray-200">
@@ -406,7 +406,7 @@ function AddTextKnowledge({
           size="sm"
           onClick={handleAdd}
           disabled={saving}
-          className="bg-[#6B745D] text-white hover:bg-[#4a5240]"
+          className="bg-ink text-ivory hover:bg-moss-deep"
         >
           {saving ? "Adding…" : "Add to knowledge"}
         </Button>
@@ -469,7 +469,7 @@ function AttachClientKnowledge({
   }
 
   return (
-    <div className="mt-3 space-y-2 rounded-xl border border-[#8E9B79]/40 bg-[#8E9B79]/5 p-4">
+    <div className="mt-3 space-y-2 rounded-xl border border-sage/50 bg-sage/10 p-4">
       <div className="relative">
         <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
         <input
@@ -477,7 +477,7 @@ function AttachClientKnowledge({
           onChange={(e) => setTerm(e.target.value)}
           placeholder="Search Hub clients & contacts…"
           autoFocus
-          className="w-full rounded-lg border border-gray-200 bg-white py-2 pl-9 pr-8 text-sm outline-none focus:border-[#8E9B79] focus:ring-2 focus:ring-[#8E9B79]/20"
+          className="w-full rounded-lg border border-line bg-paper-2 py-2 pl-9 pr-8 text-sm outline-none focus:border-sage focus:ring-2 focus:ring-sage/20"
         />
         <button
           onClick={onCancel}
@@ -501,12 +501,12 @@ function AttachClientKnowledge({
             key={`${hit.kind}:${hit.id}`}
             onClick={() => handleAttach(hit)}
             disabled={attachingId !== null}
-            className="flex w-full items-center gap-2.5 rounded-lg bg-white px-3 py-2 text-left shadow-sm transition-colors hover:bg-[#F4F1ED] disabled:opacity-50"
+            className="flex w-full items-center gap-2.5 rounded-lg bg-paper-2 px-3 py-2 text-left shadow-sm transition-colors hover:bg-muted disabled:opacity-50"
           >
             {hit.kind === "organization" ? (
-              <Building2 className="h-4 w-4 flex-shrink-0 text-[#6B745D]" />
+              <Building2 className="h-4 w-4 flex-shrink-0 text-moss" />
             ) : (
-              <Users className="h-4 w-4 flex-shrink-0 text-[#6B745D]" />
+              <Users className="h-4 w-4 flex-shrink-0 text-moss" />
             )}
             <span className="min-w-0 flex-1">
               <span className="block truncate text-sm font-medium text-gray-800">{hit.name}</span>

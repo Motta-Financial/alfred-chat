@@ -37,17 +37,20 @@ export function HealthDot() {
 
   const color =
     status === "ok"
-      ? "bg-green-400"
+      ? "bg-emerald-300 animate-glow-dot"
       : status === "error"
         ? "bg-red-400"
-        : "bg-gray-300"
+        : "bg-ivory/30"
 
   const label =
     status === "ok" ? "Hub online" : status === "error" ? "Hub unreachable" : "Checking…"
 
   return (
-    <span className="flex items-center gap-1.5 text-xs text-white/70" title={label}>
-      <span className={`w-2 h-2 rounded-full ${color} transition-colors`} />
+    <span
+      className="flex items-center gap-2 rounded-full border border-ivory/10 px-3 py-1.5 text-[11px] tracking-wide text-ivory/60"
+      title={label}
+    >
+      <span className={`h-1.5 w-1.5 rounded-full transition-colors ${color}`} />
       {label}
     </span>
   )
