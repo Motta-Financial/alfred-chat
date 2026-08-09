@@ -3,8 +3,9 @@
 import { memo, useCallback, useEffect, useRef, useState } from "react"
 import { useChat } from "@ai-sdk/react"
 import { DefaultChatTransport, isTextUIPart, isToolUIPart, type UIMessage } from "ai"
-import { ArrowUp, Database, Folder, Mail, Scale, Square, UserSearch } from "lucide-react"
+import { ArrowUp, CircleAlert, Database, Folder, Mail, Scale, Square, UserSearch } from "lucide-react"
 import TextareaAutosize from "react-textarea-autosize"
+import { toast } from "sonner"
 import { MarkdownMessage } from "@/components/markdown-message"
 import { createClient } from "@/lib/supabase/client"
 import { getBearerToken, HUB_CHAT_URL, assertHubConfigured } from "@/lib/hub"
@@ -176,6 +177,11 @@ export function AlfredChat({
     )
   }
 
+  // Last send failure, shown inline under the thread. A silent failure
+  // here once looked like ALFRED simply ignoring the user (the Aug 2026
+  // env-var outage) — never swallow transport errors again.
+  const [sendError, setSendError] = useState<string | null>(null)
+
   const { messages, setMessages, sendMessage, stop, status } = useChat({
     transport: transportRef.current,
     messages: initialMessages,
@@ -186,6 +192,11 @@ export function AlfredChat({
         const id = (part as { type: string; id?: string }).id
         if (id) onConversationId(id)
       }
+    },
+    onError(error) {
+      const detail = error instanceof Error ? error.message : String(error)
+      setSendError(detail)
+      toast.error("ALFRED couldn't answer that message.", { description: detail })
     },
   })
 
@@ -222,6 +233,8 @@ export function AlfredChat({
   const handleSend = useCallback(async () => {
     const text = input.trim()
     if (!text || isStreaming) return
+
+    setSendError(null)
 
     // Resolve the model for THIS message. Auto routes per prompt; a
     // concrete selection passes straight through.
@@ -312,6 +325,16 @@ export function AlfredChat({
                 <div className="animate-msg-in flex items-center gap-3">
                   <Monogram thinking />
                   <span className="shimmer-text text-sm font-medium">Considering…</span>
+                </div>
+              )}
+
+              {sendError && !isStreaming && (
+                <div className="animate-msg-in flex items-start gap-2.5 rounded-xl border border-destructive/25 bg-destructive/5 px-4 py-3">
+                  <CircleAlert className="mt-0.5 h-4 w-4 flex-shrink-0 text-destructive" />
+                  <div className="min-w-0 text-sm">
+                    <p className="font-medium text-foreground">That message didn&apos;t go through.</p>
+                    <p className="mt-0.5 break-words text-xs text-muted-foreground">{sendError}</p>
+                  </div>
                 </div>
               )}
             </div>

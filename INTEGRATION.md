@@ -124,7 +124,6 @@ rollback;
 | `NEXT_PUBLIC_SUPABASE_URL` | Supabase project URL — same value as Hub |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase anon (public) key — same value as Hub |
 | `NEXT_PUBLIC_HUB_CHAT_URL` | `https://hub.motta.cpa/api/alfred/chat` |
-| `NEXT_PUBLIC_HUB_CONVERSATIONS_URL` | `https://hub.motta.cpa/api/alfred/conversations` |
 | `SUPABASE_COOKIE_DOMAIN` | `.motta.cpa` — scopes cookies written by **server-side** Supabase clients (middleware, server components, /auth/callback) |
 | `NEXT_PUBLIC_SUPABASE_COOKIE_DOMAIN` | `.motta.cpa` — same value, but `NEXT_PUBLIC_`-prefixed so the **browser** Supabase client (`lib/supabase/client.ts`) can read it too. Without this, every client-side token refresh writes a host-only cookie that shadows the shared one, silently breaking SSO durability a few minutes after a successful sign-in. Both vars must be set, and must be byte-identical to whatever the Hub uses. |
 

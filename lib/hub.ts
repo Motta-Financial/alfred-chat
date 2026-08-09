@@ -19,13 +19,19 @@ function readHubUrl(name: string): string {
 // Property getters so accidental top-level reads still throw, but module
 // import does not. Consumers do `HUB_CHAT_URL` exactly as before.
 export const HUB_CHAT_URL: string = (process.env.NEXT_PUBLIC_HUB_CHAT_URL as string) || ""
-export const HUB_CONVERSATIONS_URL: string =
-  (process.env.NEXT_PUBLIC_HUB_CONVERSATIONS_URL as string) || ""
 
-/** Throw if either Hub URL is missing. Call before any fetch to the Hub. */
+/**
+ * Throw if the Hub chat URL is missing. Call before any fetch to the Hub.
+ *
+ * NOTE: this must only require env vars the client actually uses.
+ * NEXT_PUBLIC_HUB_CONVERSATIONS_URL used to be checked here too, but it
+ * became vestigial when conversation reads moved to direct Supabase
+ * queries — and when the var was cleaned out of the Vercel project this
+ * assert kept throwing BEFORE every chat send, killing chat silently
+ * (Aug 2026 outage: message bubbles with no reply, no server request).
+ */
 export function assertHubConfigured(): void {
   readHubUrl("NEXT_PUBLIC_HUB_CHAT_URL")
-  readHubUrl("NEXT_PUBLIC_HUB_CONVERSATIONS_URL")
 }
 
 /** Hub model-catalog endpoint (sibling of /chat), e.g.
