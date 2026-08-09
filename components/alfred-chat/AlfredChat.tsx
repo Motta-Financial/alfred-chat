@@ -3,15 +3,15 @@
 import { memo, useCallback, useEffect, useRef, useState } from "react"
 import { useChat } from "@ai-sdk/react"
 import { DefaultChatTransport, isTextUIPart, isToolUIPart, type UIMessage } from "ai"
-import { Database, Folder, Send, Square } from "lucide-react"
+import { ArrowUp, Database, Folder, Mail, Scale, Square, UserSearch } from "lucide-react"
 import TextareaAutosize from "react-textarea-autosize"
-import { Button } from "@/components/ui/button"
 import { MarkdownMessage } from "@/components/markdown-message"
 import { createClient } from "@/lib/supabase/client"
 import { getBearerToken, HUB_CHAT_URL, assertHubConfigured } from "@/lib/hub"
 import { ModelSelector, type ModelCatalog } from "@/components/alfred-chat/ModelSelector"
 import { DeepThinkToggle, useDeepThink } from "@/components/alfred-chat/DeepThinkToggle"
-import { getModelById } from "@/lib/models"
+import { AUTO_MODEL_ID, DEFAULT_MODEL_ID, getModelById, routeAutoModel } from "@/lib/models"
+import { cn } from "@/lib/utils"
 import type { SupabaseClient } from "@supabase/supabase-js"
 
 type ConversationId = string | null
@@ -67,6 +67,36 @@ function makeTransport(
   })
 }
 
+/** Serif "A" seal — ALFRED's mark. Aura ring animates while thinking. */
+function Monogram({ size = "md", thinking = false }: { size?: "md" | "lg"; thinking?: boolean }) {
+  const dims = size === "lg" ? "h-16 w-16" : "h-7 w-7"
+  const glyph = size === "lg" ? "text-[28px]" : "text-[13px]"
+  return (
+    <div className={cn("relative flex-shrink-0", dims)}>
+      <div
+        className={cn(
+          "absolute -inset-1.5 rounded-full bg-sage/50 blur-md",
+          thinking ? "animate-aura" : size === "lg" ? "animate-aura opacity-40" : "opacity-0",
+        )}
+      />
+      <div
+        className={cn(
+          "relative flex items-center justify-center rounded-full bg-ink ring-1 ring-brass/40",
+          dims,
+        )}
+      >
+        <span className={cn("font-display leading-none text-ivory", glyph)}>A</span>
+      </div>
+    </div>
+  )
+}
+
+const SUGGESTIONS = [
+  { icon: Mail, label: "Draft a client email", prefill: "Draft an email to a client about " },
+  { icon: Scale, label: "Research a tax question", prefill: "Research the tax treatment of " },
+  { icon: UserSearch, label: "Summarize a client", prefill: "Give me a status summary for " },
+]
+
 export function AlfredChat({
   conversationId,
   projectId = null,
@@ -93,6 +123,16 @@ export function AlfredChat({
   useEffect(() => {
     modelIdRef.current = selectedModelId
   }, [selectedModelId])
+
+  // The CONCRETE model id sent to the Hub for the in-flight request.
+  // When "Auto" is selected, handleSend resolves it per prompt via
+  // routeAutoModel() right before sendMessage — the Hub never sees the
+  // virtual auto id (it validates body.model against real gateway ids).
+  const sendModelRef = useRef<string>(
+    selectedModelId === AUTO_MODEL_ID ? DEFAULT_MODEL_ID : selectedModelId,
+  )
+  // Label of the model Auto last routed to, for the console indicator.
+  const [routedLabel, setRoutedLabel] = useState<string | null>(null)
 
   // The live catalog (models) can grow after the Hub fetch resolves, so
   // it's ref'd like the other transport-closure inputs above rather than
@@ -124,13 +164,14 @@ export function AlfredChat({
     transportRef.current = makeTransport(
       createClient(),
       () => conversationIdRef.current,
-      () => modelIdRef.current,
-      // Gate `think` on the capability of whichever model the user has
-      // selected at send time. Belt and suspenders -- the Hub does the
+      // Always the resolved concrete id (Auto → routed model).
+      () => sendModelRef.current,
+      // Gate `think` on the capability of whichever model is actually
+      // used at send time. Belt and suspenders -- the Hub does the
       // same check and ignores the field on unsupported models.
       () =>
         deepThinkRef.current &&
-        getModelById(modelsRef.current, modelIdRef.current).capabilities.supportsThinking,
+        getModelById(modelsRef.current, sendModelRef.current).capabilities.supportsThinking,
       () => projectIdRef.current,
     )
   }
@@ -153,6 +194,14 @@ export function AlfredChat({
   const bottomRef = useRef<HTMLDivElement>(null)
   const isStreaming = status === "streaming" || status === "submitted"
 
+  // Time-aware greeting, resolved after mount so the server-rendered HTML
+  // (whose clock/timezone differs from the visitor's) never mismatches.
+  const [greeting, setGreeting] = useState("Hello")
+  useEffect(() => {
+    const h = new Date().getHours()
+    setGreeting(h < 12 ? "Good morning" : h < 17 ? "Good afternoon" : "Good evening")
+  }, [])
+
   // Auto-scroll to bottom when messages change. Instant while streaming —
   // a smooth scroll per token fights the next token's scroll and janks.
   useEffect(() => {
@@ -173,6 +222,19 @@ export function AlfredChat({
   const handleSend = useCallback(async () => {
     const text = input.trim()
     if (!text || isStreaming) return
+
+    // Resolve the model for THIS message. Auto routes per prompt; a
+    // concrete selection passes straight through.
+    const selected = modelIdRef.current
+    if (selected === AUTO_MODEL_ID) {
+      const routed = routeAutoModel(text, modelsRef.current, deepThinkRef.current)
+      sendModelRef.current = routed.id
+      setRoutedLabel(routed.label)
+    } else {
+      sendModelRef.current = selected
+      setRoutedLabel(null)
+    }
+
     setInput("")
     await sendMessage({ text })
   }, [input, isStreaming, sendMessage])
@@ -184,101 +246,131 @@ export function AlfredChat({
     }
   }
 
+  const isEmpty = messages.length === 0
+
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex h-full flex-col bg-paper">
       {/* Project context banner */}
       {projectName && (
         <button
           onClick={onOpenProject}
-          className="flex items-center gap-2 border-b border-[#8E9B79]/30 bg-[#8E9B79]/10 px-4 py-2 text-left transition-colors hover:bg-[#8E9B79]/20"
+          className="flex items-center gap-2 border-b border-line bg-sage/10 px-5 py-2 text-left transition-colors hover:bg-sage/20"
           title="Open project"
         >
-          <Folder className="h-3.5 w-3.5 flex-shrink-0 text-[#6B745D]" />
-          <span className="truncate text-xs font-medium text-[#4a5240]">{projectName}</span>
-          <span className="text-xs text-[#4a5240]/60">
+          <Folder className="h-3.5 w-3.5 flex-shrink-0 text-moss" />
+          <span className="truncate text-xs font-medium text-moss-deep">{projectName}</span>
+          <span className="text-xs text-moss-deep/50">
             — project instructions &amp; knowledge apply
           </span>
         </button>
       )}
 
       {/* Message list */}
-      <div className="flex-1 overflow-y-auto px-4 py-6 space-y-6">
-        {messages.length === 0 && (
-          <div className="flex flex-col items-center justify-center h-full gap-3 text-gray-400">
-            <p className="text-lg font-medium">How can I help you today?</p>
-            <p className="text-sm">
-              {projectName
-                ? `Start a conversation in ${projectName}.`
-                : "Start a conversation with ALFRED."}
-            </p>
-          </div>
-        )}
-
-        {messages.map((message) => (
-          <MessageRow key={message.id} message={message} />
-        ))}
-
-        {isStreaming && messages[messages.length - 1]?.role !== "assistant" && (
-          <div className="flex justify-start">
-            <div className="bg-gray-100 text-gray-900 rounded-2xl rounded-tl-sm px-4 py-3 max-w-[80%]">
-              <span className="animate-pulse text-gray-400">ALFRED is thinking…</span>
+      <div className="flex-1 overflow-y-auto">
+        <div
+          className={cn(
+            "mx-auto w-full max-w-3xl px-5 sm:px-8",
+            isEmpty ? "flex h-full flex-col items-center justify-center pb-24" : "py-8",
+          )}
+        >
+          {isEmpty && (
+            <div className="animate-msg-in flex flex-col items-center text-center">
+              <Monogram size="lg" />
+              <h1 className="mt-6 font-display text-[34px] font-light leading-tight tracking-tight text-foreground">
+                {greeting}.
+              </h1>
+              <p className="mt-2 max-w-sm text-sm leading-relaxed text-muted-foreground">
+                {projectName
+                  ? `Start a conversation in ${projectName} — its instructions and knowledge apply.`
+                  : "I have the Motta Hub at hand. How may I be of service?"}
+              </p>
+              <div className="mt-8 flex flex-wrap items-center justify-center gap-2">
+                {SUGGESTIONS.map(({ icon: Icon, label, prefill }) => (
+                  <button
+                    key={label}
+                    onClick={() => {
+                      setInput(prefill)
+                      inputRef.current?.focus()
+                    }}
+                    className="flex items-center gap-2 rounded-full border border-line bg-paper-2 px-3.5 py-2 text-xs font-medium text-foreground/70 transition-all hover:border-sage/60 hover:text-foreground hover:shadow-console"
+                  >
+                    <Icon className="h-3.5 w-3.5 text-moss" />
+                    {label}
+                  </button>
+                ))}
+              </div>
             </div>
-          </div>
-        )}
+          )}
 
-        <div ref={bottomRef} />
+          {!isEmpty && (
+            <div className="space-y-7">
+              {messages.map((message) => (
+                <MessageRow key={message.id} message={message} />
+              ))}
+
+              {isStreaming && messages[messages.length - 1]?.role !== "assistant" && (
+                <div className="animate-msg-in flex items-center gap-3">
+                  <Monogram thinking />
+                  <span className="shimmer-text text-sm font-medium">Considering…</span>
+                </div>
+              )}
+            </div>
+          )}
+
+          <div ref={bottomRef} />
+        </div>
       </div>
 
-      {/* Input bar */}
-      <div className="border-t border-gray-200 bg-white px-4 py-4">
-        <div className="max-w-3xl mx-auto flex flex-col gap-2">
-          <div className="flex items-center justify-between gap-3">
-            <span className="text-[11px] font-medium uppercase tracking-wider text-gray-400">
-              Model
-            </span>
-            <div className="flex items-center gap-2">
-              <DeepThinkToggle
-                value={deepThink}
-                onChange={setDeepThink}
-                enabled={thinkingAllowed}
-              />
-              <ModelSelector models={models} value={selectedModelId} onChange={setSelectedModelId} />
+      {/* Input console */}
+      <div className="flex-shrink-0 px-4 pb-4 pt-1 sm:px-6">
+        <div className="mx-auto w-full max-w-3xl">
+          <div className="shadow-console rounded-2xl border border-line bg-paper-2 transition-all focus-within:border-sage/60 focus-within:ring-4 focus-within:ring-sage/15">
+            <TextareaAutosize
+              ref={inputRef}
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder="Message ALFRED…"
+              minRows={1}
+              maxRows={8}
+              disabled={isStreaming}
+              className="w-full resize-none bg-transparent px-4 pb-1.5 pt-3.5 text-[15px] leading-relaxed text-foreground outline-none placeholder:text-muted-foreground/60 disabled:opacity-50"
+            />
+            <div className="flex items-center justify-between gap-2 px-2.5 pb-2.5">
+              <div className="flex min-w-0 items-center gap-1.5">
+                <DeepThinkToggle value={deepThink} onChange={setDeepThink} enabled={thinkingAllowed} />
+                <ModelSelector models={models} value={selectedModelId} onChange={setSelectedModelId} />
+                {selectedModelId === AUTO_MODEL_ID && routedLabel && (
+                  <span className="hidden truncate text-[11px] text-muted-foreground/70 sm:inline">
+                    → {routedLabel}
+                  </span>
+                )}
+              </div>
+              {isStreaming ? (
+                <button
+                  onClick={() => stop()}
+                  className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full border border-line bg-paper text-foreground/70 transition-colors hover:border-foreground/30 hover:text-foreground"
+                  title="Stop generating"
+                  aria-label="Stop generating"
+                >
+                  <Square className="h-3.5 w-3.5" />
+                </button>
+              ) : (
+                <button
+                  onClick={handleSend}
+                  disabled={!input.trim()}
+                  className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-ink text-ivory transition-all hover:bg-moss-deep disabled:opacity-30"
+                  title="Send"
+                  aria-label="Send"
+                >
+                  <ArrowUp className="h-4 w-4" />
+                </button>
+              )}
             </div>
           </div>
-          <div className="flex items-end gap-3">
-          <TextareaAutosize
-            ref={inputRef}
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder="Message ALFRED…"
-            minRows={1}
-            maxRows={8}
-            disabled={isStreaming}
-            className="flex-1 resize-none rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm outline-none transition-colors focus:border-[#8E9B79] focus:ring-2 focus:ring-[#8E9B79]/20 disabled:opacity-50"
-          />
-          {isStreaming ? (
-            <Button
-              onClick={() => stop()}
-              size="icon"
-              variant="outline"
-              className="flex-shrink-0 rounded-xl h-11 w-11 border-gray-200"
-              title="Stop generating"
-            >
-              <Square className="w-4 h-4" />
-            </Button>
-          ) : (
-            <Button
-              onClick={handleSend}
-              disabled={!input.trim()}
-              size="icon"
-              className="flex-shrink-0 rounded-xl h-11 w-11 bg-[#6B745D] hover:bg-[#4a5240] text-white disabled:opacity-40"
-              title="Send"
-            >
-              <Send className="w-4 h-4" />
-            </Button>
-          )}
-          </div>
+          <p className="mt-2 text-center text-[11px] text-muted-foreground/60">
+            ALFRED can make mistakes — verify important figures.
+          </p>
         </div>
       </div>
     </div>
@@ -291,46 +383,48 @@ export function AlfredChat({
 const MessageRow = memo(function MessageRow({ message }: { message: UIMessage }) {
   const isUser = message.role === "user"
 
-  return (
-    <div className={`flex ${isUser ? "justify-end" : "justify-start"}`}>
-      <div
-        className={`max-w-[80%] rounded-2xl px-4 py-3 ${
-          isUser
-            ? "bg-[#6B745D] text-white rounded-tr-sm"
-            : "bg-gray-100 text-gray-900 rounded-tl-sm"
-        }`}
-      >
-        {message.parts.map((part, i) => {
-          if (isTextUIPart(part)) {
-            return (
-              <MarkdownMessage
-                key={i}
-                content={part.text}
-                isUser={isUser}
-              />
-            )
-          }
+  const parts = message.parts.map((part, i) => {
+    if (isTextUIPart(part)) {
+      return <MarkdownMessage key={i} content={part.text} isUser={isUser} />
+    }
 
-          const partType: string = part.type
-          if (isToolUIPart(part) || partType === "dynamic-tool") {
-            const toolName =
-              partType === "dynamic-tool"
-                ? (part as unknown as { toolName: string }).toolName
-                : partType.replace(/^tool-/, "")
-            return (
-              <span
-                key={i}
-                className="flex items-center gap-1.5 text-xs text-gray-500 italic py-1"
-              >
-                <Database className="w-3 h-3 flex-shrink-0" />
-                Querying {toolName}…
-              </span>
-            )
-          }
+    const partType: string = part.type
+    if (isToolUIPart(part) || partType === "dynamic-tool") {
+      const toolName =
+        partType === "dynamic-tool"
+          ? (part as unknown as { toolName: string }).toolName
+          : partType.replace(/^tool-/, "")
+      return (
+        <span key={i} className="flex items-center gap-1.5 py-1 text-xs italic text-muted-foreground">
+          <Database className="h-3 w-3 flex-shrink-0 text-sage" />
+          Consulting {toolName}…
+        </span>
+      )
+    }
 
-          return null
-        })}
+    return null
+  })
+
+  if (isUser) {
+    return (
+      <div className="animate-msg-in flex justify-end">
+        <div className="max-w-[82%] rounded-2xl rounded-tr-md bg-ink px-4 py-3 text-ivory">
+          {parts}
+        </div>
       </div>
+    )
+  }
+
+  // Assistant replies sit flat on the paper — editorial, no bubble.
+  return (
+    <div className="animate-msg-in">
+      <div className="mb-2 flex items-center gap-2.5">
+        <Monogram />
+        <span className="text-[11px] font-medium uppercase tracking-[0.2em] text-muted-foreground">
+          Alfred
+        </span>
+      </div>
+      <div className="pl-[38px] text-[15px] leading-relaxed">{parts}</div>
     </div>
   )
 })

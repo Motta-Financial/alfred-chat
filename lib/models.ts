@@ -117,9 +117,85 @@ export const FALLBACK_MODELS: AlfredModel[] = [
   },
 ]
 
-/** Default model id used when the user has not picked one.
+/** Default concrete model id — the router's "balanced" tier and the
+ *  fallback wherever a real gateway id is required.
  *  Matches `CLAUDE_DEFAULT` / `ALFRED_CHAT_MODEL` on the Hub. */
 export const DEFAULT_MODEL_ID = "anthropic/claude-sonnet-4.6"
+
+/* ------------------------------------------------------------------ */
+/* Auto model routing                                                  */
+/*                                                                     */
+/* "Auto" is a VIRTUAL entry that exists only in this client. The Hub  */
+/* validates body.model via isGatewayTextModel() and silently falls    */
+/* back on a mismatch, so the auto id is never sent over the wire —    */
+/* routeAutoModel() resolves it to a concrete catalog id per prompt    */
+/* right before each send.                                             */
+/* ------------------------------------------------------------------ */
+
+export const AUTO_MODEL_ID = "auto"
+
+export const AUTO_MODEL: AlfredModel = {
+  id: AUTO_MODEL_ID,
+  label: "Auto",
+  provider: "ALFRED",
+  hint: "Picks the best model for each prompt",
+  // Deep think stays available — the router honours it when resolving.
+  capabilities: { supportsThinking: true, supportsVision: true },
+}
+
+/** Prepend the virtual Auto entry (idempotent). */
+export function withAutoModel(models: AlfredModel[]): AlfredModel[] {
+  return models.some((m) => m.id === AUTO_MODEL_ID) ? models : [AUTO_MODEL, ...models]
+}
+
+/** Multi-step / analysis work that deserves a stronger model. */
+const HEAVY_SIGNAL =
+  /\b(analy[sz]e|review|audit|reconcil\w*|research|strateg\w*|forecast|projection|valuation|memo|plan\b|step[ -]?by[ -]?step|thorough|comprehensive|detailed|compare|restructur\w*|multi[ -]?state|scenario)\b/i
+/** Statute/regulation citations — tax research prompts. */
+const CITATION_SIGNAL = /§|\birc\s*\d|\bsec(?:tion)?\.?\s*\d{2,}|\breg(?:ulation)?s?\.?\s*\d/i
+/** Code or SQL in the prompt. */
+const CODE_SIGNAL = /```|\b(function|const|class)\s|\bselect\b[\s\S]{0,120}?\bfrom\b/i
+
+/**
+ * Resolve the virtual Auto model to a concrete catalog entry for one
+ * prompt. Deliberately conservative: the balanced tier is the default,
+ * the light tier only takes clearly-simple lookups, and the heavy tier
+ * only explicit deep/analysis work (or Deep think on a complex prompt).
+ */
+export function routeAutoModel(
+  prompt: string,
+  models: AlfredModel[],
+  deepThink: boolean,
+): AlfredModel {
+  const pool = models.filter((m) => m.id !== AUTO_MODEL_ID)
+  const find = (needle: string) => pool.find((m) => m.id.includes(needle))
+  const balanced =
+    find("sonnet") ?? pool.find((m) => m.id === DEFAULT_MODEL_ID) ?? pool[0] ?? FALLBACK_MODELS[0]
+  const light = find("haiku") ?? find("mini")
+  const heavy = find("opus") ?? balanced
+
+  const text = prompt.trim()
+  const words = text.split(/\s+/).length
+  const isHeavy = HEAVY_SIGNAL.test(text) || CITATION_SIGNAL.test(text) || CODE_SIGNAL.test(text)
+
+  if (deepThink) {
+    // `think` only maps to Anthropic adaptive thinking on the Hub, so
+    // route within thinking-capable models.
+    const thinkers = pool.filter((m) => m.capabilities.supportsThinking)
+    const thinkBalanced = thinkers.find((m) => m.id.includes("sonnet")) ?? thinkers[0] ?? balanced
+    const thinkHeavy = thinkers.find((m) => m.id.includes("opus")) ?? thinkBalanced
+    return isHeavy || words > 150 ? thinkHeavy : thinkBalanced
+  }
+
+  if (isHeavy && (words > 150 || /\b(thorough|comprehensive|deep|detailed)\b/i.test(text))) {
+    return heavy
+  }
+  // Short, plain lookups → fastest tier.
+  if (light && words <= 25 && !isHeavy) {
+    return light
+  }
+  return balanced
+}
 
 export function getModelById(models: AlfredModel[], id: string | null | undefined): AlfredModel {
   return (

@@ -74,16 +74,45 @@ table requires a confirmed RLS policy and an entry in this table.
 
 - `alfred_conversations` — `end_user_team_member_id` resolves (via the
   team-member lookup) to the authenticated user's `auth.uid()`. Anon
-  callers must see zero rows.
+  callers must be rejected outright (no grants at all).
 - `alfred_messages` — `conversation_id` belongs to a conversation owned
-  by the authenticated user. Anon callers must see zero rows.
+  by the authenticated user. Anon callers must be rejected outright.
 
 Smoke-test before deploying any new direct-read table:
 
 ```bash
-curl -sS "$NEXT_PUBLIC_ALFRED_STORAGE_SUPABASE_URL/rest/v1/<table>?select=id&limit=1" \
-  -H "apikey: $NEXT_PUBLIC_ALFRED_STORAGE_SUPABASE_ANON_KEY"
-# Expect: []
+curl -sS "$NEXT_PUBLIC_SUPABASE_URL/rest/v1/<table>?select=id&limit=1" \
+  -H "apikey: $NEXT_PUBLIC_SUPABASE_ANON_KEY"
+# Expect: {"code":"42501", ...} (permission denied — anon has no grants)
+```
+
+### Postgres grant matrix (RLS is necessary but NOT sufficient)
+
+RLS only filters rows *after* the role's table privileges pass. In
+August 2026 a lockdown pass revoked `SELECT` from `authenticated` on the
+`alfred_*` tables (and `EXECUTE` on the RLS helper functions), which
+broke every direct read with "permission denied for table
+alfred_conversations" even though the RLS policies were intact.
+Restored by Supabase migrations `restore_alfred_client_read_access` and
+`restore_alfred_rls_helper_execute`. The invariants the thin client
+depends on:
+
+| Object | `authenticated` | `anon` |
+|---|---|---|
+| `alfred_conversations`, `alfred_messages`, `alfred_projects`, `alfred_project_knowledge` | `SELECT, INSERT, UPDATE, DELETE` (RLS scopes rows) | nothing |
+| `team_members` | `SELECT` (team-member lookup) | nothing |
+| `organizations` | `SELECT` (staff-wide, RLS-gated) | nothing |
+| `contacts` | column-level `SELECT` on everything EXCEPT `ssn_encrypted`, `drivers_license`, `passport_number` | nothing |
+| Functions `alfred_is_my_team_member(uuid)`, `alfred_caller_is_service_account()`, `alfred_caller_is_team_member()`, `alfred_can_use_project(uuid)` | `EXECUTE` (policies call them) | — |
+| Realtime | `alfred_conversations` must be in the `supabase_realtime` publication with `REPLICA IDENTITY FULL` (RLS-checked UPDATE/DELETE events need the old row image) | — |
+
+Verify after any grants/security migration on the shared project:
+
+```sql
+begin;
+set local role authenticated;
+select count(*) from alfred_conversations;  -- 0 rows, but NOT an error
+rollback;
 ```
 
 ---
@@ -233,3 +262,15 @@ body. The Hub should:
 Should list every model the firm exposes through the Vercel AI Gateway.
 The client falls back to its static Claude list when the endpoint is
 missing, and `POST /chat` must accept any id this endpoint returns.
+
+### "Auto" model (client-side only)
+
+The picker's default entry, **Auto** (`id: "auto"`), is virtual and
+never reaches the Hub — `POST /chat` continues to receive only concrete
+gateway ids. `routeAutoModel()` in `lib/models.ts` resolves it per
+prompt right before each send: light tier (Haiku/mini) for short plain
+lookups, heavy tier (Opus) for explicit analysis/research prompts or
+Deep think on a complex prompt, balanced tier (Sonnet) otherwise. The
+tiers are discovered from the live catalog by id substring
+(`haiku`/`mini`, `sonnet`, `opus`), so the Hub can rotate model versions
+without a client change. No Hub work required.
