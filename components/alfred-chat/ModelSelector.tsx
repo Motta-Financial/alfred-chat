@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useMemo, useState } from "react"
-import { Sparkles } from "lucide-react"
+import { Sparkles, WandSparkles } from "lucide-react"
 import {
   Select,
   SelectContent,
@@ -12,10 +12,11 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import {
-  DEFAULT_MODEL_ID,
+  AUTO_MODEL_ID,
   FALLBACK_MODELS,
   fetchHubModels,
   getModelById,
+  withAutoModel,
   type AlfredModel,
 } from "@/lib/models"
 import { createClient } from "@/lib/supabase/client"
@@ -49,7 +50,11 @@ export function ModelSelector({ models, value, onChange }: ModelSelectorProps) {
         className="h-8 w-auto gap-2 rounded-full border-transparent bg-transparent text-xs font-medium text-muted-foreground shadow-none hover:bg-muted hover:text-foreground focus:ring-sage/30"
         aria-label="Select AI model"
       >
-        <Sparkles className="h-3.5 w-3.5 text-moss" aria-hidden />
+        {current.id === AUTO_MODEL_ID ? (
+          <WandSparkles className="h-3.5 w-3.5 text-brass" aria-hidden />
+        ) : (
+          <Sparkles className="h-3.5 w-3.5 text-moss" aria-hidden />
+        )}
         {/* Render only the label — the stacked label+hint block belongs in
             the dropdown, not the slim console row. */}
         <SelectValue>{current.label}</SelectValue>
@@ -93,8 +98,10 @@ export interface ModelCatalog {
  * with a static fallback; the selection persists in localStorage.
  */
 export function useModelCatalog(): ModelCatalog {
-  const [models, setModels] = useState<AlfredModel[]>(FALLBACK_MODELS)
-  const [selectedId, setSelected] = useState<string>(DEFAULT_MODEL_ID)
+  // The virtual "Auto" entry heads every catalog (static and live) and is
+  // the default selection — routeAutoModel() resolves it per prompt.
+  const [models, setModels] = useState<AlfredModel[]>(withAutoModel(FALLBACK_MODELS))
+  const [selectedId, setSelected] = useState<string>(AUTO_MODEL_ID)
 
   useEffect(() => {
     let cancelled = false
@@ -104,10 +111,14 @@ export function useModelCatalog(): ModelCatalog {
     const stored = window.localStorage.getItem(STORAGE_KEY)
     if (stored) setSelected(stored)
 
-    fetchHubModels(() => getBearerToken(createClient())).then(({ models: live, defaultId }) => {
+    fetchHubModels(() => getBearerToken(createClient())).then(({ models: live }) => {
       if (cancelled) return
-      setModels(live)
-      setSelected((prev) => (live.some((m) => m.id === prev) ? prev : defaultId))
+      const merged = withAutoModel(live)
+      setModels(merged)
+      // A stale stored id (model retired from the gateway) falls back to
+      // Auto rather than the Hub default — Auto re-routes per prompt, so
+      // it is always valid.
+      setSelected((prev) => (merged.some((m) => m.id === prev) ? prev : AUTO_MODEL_ID))
     })
 
     return () => {

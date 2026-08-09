@@ -10,7 +10,7 @@ import { createClient } from "@/lib/supabase/client"
 import { getBearerToken, HUB_CHAT_URL, assertHubConfigured } from "@/lib/hub"
 import { ModelSelector, type ModelCatalog } from "@/components/alfred-chat/ModelSelector"
 import { DeepThinkToggle, useDeepThink } from "@/components/alfred-chat/DeepThinkToggle"
-import { getModelById } from "@/lib/models"
+import { AUTO_MODEL_ID, DEFAULT_MODEL_ID, getModelById, routeAutoModel } from "@/lib/models"
 import { cn } from "@/lib/utils"
 import type { SupabaseClient } from "@supabase/supabase-js"
 
@@ -124,6 +124,16 @@ export function AlfredChat({
     modelIdRef.current = selectedModelId
   }, [selectedModelId])
 
+  // The CONCRETE model id sent to the Hub for the in-flight request.
+  // When "Auto" is selected, handleSend resolves it per prompt via
+  // routeAutoModel() right before sendMessage — the Hub never sees the
+  // virtual auto id (it validates body.model against real gateway ids).
+  const sendModelRef = useRef<string>(
+    selectedModelId === AUTO_MODEL_ID ? DEFAULT_MODEL_ID : selectedModelId,
+  )
+  // Label of the model Auto last routed to, for the console indicator.
+  const [routedLabel, setRoutedLabel] = useState<string | null>(null)
+
   // The live catalog (models) can grow after the Hub fetch resolves, so
   // it's ref'd like the other transport-closure inputs above rather than
   // captured once at the (one-time) transportRef init below.
@@ -154,13 +164,14 @@ export function AlfredChat({
     transportRef.current = makeTransport(
       createClient(),
       () => conversationIdRef.current,
-      () => modelIdRef.current,
-      // Gate `think` on the capability of whichever model the user has
-      // selected at send time. Belt and suspenders -- the Hub does the
+      // Always the resolved concrete id (Auto → routed model).
+      () => sendModelRef.current,
+      // Gate `think` on the capability of whichever model is actually
+      // used at send time. Belt and suspenders -- the Hub does the
       // same check and ignores the field on unsupported models.
       () =>
         deepThinkRef.current &&
-        getModelById(modelsRef.current, modelIdRef.current).capabilities.supportsThinking,
+        getModelById(modelsRef.current, sendModelRef.current).capabilities.supportsThinking,
       () => projectIdRef.current,
     )
   }
@@ -211,6 +222,19 @@ export function AlfredChat({
   const handleSend = useCallback(async () => {
     const text = input.trim()
     if (!text || isStreaming) return
+
+    // Resolve the model for THIS message. Auto routes per prompt; a
+    // concrete selection passes straight through.
+    const selected = modelIdRef.current
+    if (selected === AUTO_MODEL_ID) {
+      const routed = routeAutoModel(text, modelsRef.current, deepThinkRef.current)
+      sendModelRef.current = routed.id
+      setRoutedLabel(routed.label)
+    } else {
+      sendModelRef.current = selected
+      setRoutedLabel(null)
+    }
+
     setInput("")
     await sendMessage({ text })
   }, [input, isStreaming, sendMessage])
@@ -316,6 +340,11 @@ export function AlfredChat({
               <div className="flex min-w-0 items-center gap-1.5">
                 <DeepThinkToggle value={deepThink} onChange={setDeepThink} enabled={thinkingAllowed} />
                 <ModelSelector models={models} value={selectedModelId} onChange={setSelectedModelId} />
+                {selectedModelId === AUTO_MODEL_ID && routedLabel && (
+                  <span className="hidden truncate text-[11px] text-muted-foreground/70 sm:inline">
+                    → {routedLabel}
+                  </span>
+                )}
               </div>
               {isStreaming ? (
                 <button

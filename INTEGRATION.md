@@ -262,3 +262,15 @@ body. The Hub should:
 Should list every model the firm exposes through the Vercel AI Gateway.
 The client falls back to its static Claude list when the endpoint is
 missing, and `POST /chat` must accept any id this endpoint returns.
+
+### "Auto" model (client-side only)
+
+The picker's default entry, **Auto** (`id: "auto"`), is virtual and
+never reaches the Hub — `POST /chat` continues to receive only concrete
+gateway ids. `routeAutoModel()` in `lib/models.ts` resolves it per
+prompt right before each send: light tier (Haiku/mini) for short plain
+lookups, heavy tier (Opus) for explicit analysis/research prompts or
+Deep think on a complex prompt, balanced tier (Sonnet) otherwise. The
+tiers are discovered from the live catalog by id substring
+(`haiku`/`mini`, `sonnet`, `opus`), so the Hub can rotate model versions
+without a client change. No Hub work required.
