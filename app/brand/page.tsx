@@ -84,9 +84,13 @@ export default function BrandPage() {
             {backgrounds.map((b) => (
               <figure key={b.caption} className="flex flex-col gap-3">
                 <div
-                  className={`flex h-40 items-center justify-center rounded-2xl px-4 ${b.bg}`}
+                  className={`flex h-40 items-center justify-center rounded-2xl px-4 [container-type:inline-size] print:h-32 print:px-3 ${b.bg}`}
                 >
-                  <Wordmark className="text-4xl" inkClassName={b.ink} accentClassName={b.accent} />
+                  <Wordmark
+                    className="text-[length:min(2.25rem,11cqw)] print:text-[length:min(1.5rem,10cqw)]"
+                    inkClassName={b.ink}
+                    accentClassName={b.accent}
+                  />
                 </div>
                 <figcaption className="text-center font-sans text-sm text-[#8E9B79]">
                   {b.caption}
