@@ -23,7 +23,7 @@ export function Wordmark({
       <span className={cn("ml-[0.18em] italic font-normal", accentClassName)}>Ai</span>
       <span
         aria-hidden="true"
-        className="relative -top-[1.75em] ml-[0.04em] text-[0.28em] font-normal leading-none opacity-80"
+        className="relative -top-[1.75em] ml-[0.35em] text-[0.28em] font-normal leading-none opacity-80"
       >
         ™
       </span>
