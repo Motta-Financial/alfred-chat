@@ -148,7 +148,7 @@ export function OnePagerFooter() {
   return (
     <footer className="flex items-center justify-between border-t border-brass pt-[9pt] text-[8pt] text-ink/75">
       <p>ALFRED Ai — Your firm&apos;s right hand.</p>
-      <p>Created by Sabrina Zekio · Suffolk University</p>
+      <p>Created by Samprina Zekio · Suffolk University</p>
     </footer>
   )
 }
