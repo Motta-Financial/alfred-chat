@@ -41,7 +41,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             </div>
             <div className="flex items-baseline gap-2.5">
               <span className="font-display text-xl leading-none tracking-wide text-ivory">
-                ALFRED
+                ALFRED <span className="text-brass">Ai</span>
               </span>
               <span className="hidden text-[11px] uppercase tracking-[0.22em] text-ivory/40 sm:inline">
                 The AI assistant for CPA firms
