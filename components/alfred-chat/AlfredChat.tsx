@@ -6,7 +6,7 @@ import TextareaAutosize from "react-textarea-autosize"
 import { MarkdownMessage } from "@/components/markdown-message"
 import { ModelSelector } from "@/components/alfred-chat/ModelSelector"
 import { DeepThinkToggle, useDeepThink } from "@/components/alfred-chat/DeepThinkToggle"
-import { FIRM_NAME, getScriptedReply, STAFF_USER, type DemoMessage } from "@/lib/demo/mock-data"
+import { FIRM_NAME, getScriptedReply, STAFF_USER, SUMMARIZE_CLIENT_PREFILL, type DemoMessage } from "@/lib/demo/mock-data"
 import { cn } from "@/lib/utils"
 
 const REPLY_DELAY_MS = 1200
@@ -47,7 +47,7 @@ function Monogram({ size = "md", thinking = false }: { size?: "md" | "lg"; think
 const SUGGESTIONS = [
   { icon: Mail, label: "Draft a client email", prefill: "Draft an email to a client about " },
   { icon: Scale, label: "Research a tax question", prefill: "Research the tax treatment of " },
-  { icon: UserSearch, label: "Summarize a client", prefill: "Give me a status summary for " },
+  { icon: UserSearch, label: "Summarize a client", prefill: SUMMARIZE_CLIENT_PREFILL },
 ]
 
 export function AlfredChat({

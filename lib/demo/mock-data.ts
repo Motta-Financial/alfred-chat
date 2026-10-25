@@ -158,13 +158,96 @@ const FALLBACK_REPLY = `I'm happy to help. Since this is a demo with fictional d
 - "Summarize my last meeting with Harlow Bakery"
 - "Where is the Ortiz proposal?"`
 
-/** Pick a scripted answer from keywords in the user's message. */
+const MAPLE_REPLY = `**Maple Street Dental PC** is a new client in onboarding. The kickoff meeting is Thursday at 11:30 AM.
+
+| Item | Status |
+| --- | --- |
+| Engagement letter | Signed |
+| Prior-year returns | Requested, not yet received |
+| Payroll system access | Pending |
+| Chart of accounts review | Not started |
+
+**Suggested next step:** send a reminder before Thursday asking for the prior-year returns so the kickoff can focus on the chart of accounts.`
+
+const PRIYA_REPLY = `**Priya Nair** is a self-employed consultant with 1099 income and quarterly estimated payments.
+
+| Item | Status |
+| --- | --- |
+| Q3 estimated payment confirmation | Missing (requested Oct 12) |
+| Home office deduction | Under review |
+| Estimated tax planning meeting | Friday, 9:00 AM |
+
+**Suggested next step:** ask Priya for the Q3 payment confirmation ahead of Friday's planning meeting.`
+
+type ClientKey = "ortiz" | "harlow" | "chen" | "maple" | "priya"
+
+const CLIENT_PATTERNS: Array<[ClientKey, RegExp]> = [
+  ["ortiz", /\bortiz\b/],
+  ["harlow", /\bharlow\b/],
+  ["chen", /\bchen\b/],
+  ["maple", /\bmaple\b/],
+  ["priya", /\bpriya\b/],
+]
+
+function findClient(text: string): ClientKey | null {
+  for (const [key, pattern] of CLIENT_PATTERNS) {
+    if (pattern.test(text)) return key
+  }
+  return null
+}
+
+function wantsMeetingSummary(text: string): boolean {
+  return text.includes("meeting") || text.includes("summar")
+}
+
+function replyForClient(client: ClientKey, text: string): string {
+  switch (client) {
+    case "ortiz":
+      return PROPOSAL_REPLY
+    case "harlow":
+      return wantsMeetingSummary(text) ? MEETING_REPLY : OPEN_WORK_REPLY
+    case "chen":
+      return CHEN_REPLY
+    case "maple":
+      return MAPLE_REPLY
+    case "priya":
+      return PRIYA_REPLY
+  }
+}
+
+/** Text the "Summarize a client" quick action pre-fills into the input. */
+export const SUMMARIZE_CLIENT_PREFILL = "Give me a status summary for "
+
+function replyForQuickAction(message: string): string | null {
+  const trimmed = message.trim()
+  if (!trimmed.toLowerCase().startsWith(SUMMARIZE_CLIENT_PREFILL.trim().toLowerCase())) return null
+
+  const name = trimmed.slice(SUMMARIZE_CLIENT_PREFILL.trim().length).trim().replace(/[?.!]+$/, "")
+  if (!name) return "Which client would you like a status summary for? For example, the Chen Family or Harlow Bakery."
+
+  const client = findClient(name.toLowerCase())
+  if (client === "harlow") return OPEN_WORK_REPLY
+  if (client) return replyForClient(client, "")
+  return `I don't have **${name}** in this demo's data. Try one of: Chen Family, Harlow Bakery LLC, Ortiz & Partners Design, Maple Street Dental PC or Priya Nair.`
+}
+
+/**
+ * Pick a scripted answer. Client names win over generic keywords, so
+ * "status of Harlow" is answered about Harlow, not about the Chen Family.
+ */
 export function getScriptedReply(message: string): string {
+  const quickAction = replyForQuickAction(message)
+  if (quickAction) return quickAction
+
   const text = message.toLowerCase()
-  if (text.includes("proposal") || text.includes("ortiz")) return PROPOSAL_REPLY
-  if (text.includes("meeting") || text.includes("summarize")) return MEETING_REPLY
-  if (text.includes("status") || text.includes("chen")) return CHEN_REPLY
-  if (text.includes("open") || text.includes("harlow")) return OPEN_WORK_REPLY
+
+  const client = findClient(text)
+  if (client) return replyForClient(client, text)
+
+  if (text.includes("proposal")) return PROPOSAL_REPLY
+  if (wantsMeetingSummary(text)) return MEETING_REPLY
+  if (text.includes("status")) return CHEN_REPLY
+  if (text.includes("open")) return OPEN_WORK_REPLY
   return FALLBACK_REPLY
 }
 
