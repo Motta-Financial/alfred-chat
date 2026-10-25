@@ -21,7 +21,7 @@ interface DeepThinkToggleProps {
 /**
  * Compact pill-style toggle that lives next to the model picker.
  * When on, the chat transport sends `{ think: true }` in the body, and
- * the Hub turns on Anthropic adaptive thinking for the next response.
+ * the assistant turns on Anthropic adaptive thinking for the next response.
  */
 export function DeepThinkToggle({ value, onChange, enabled }: DeepThinkToggleProps) {
   const isOn = enabled && value

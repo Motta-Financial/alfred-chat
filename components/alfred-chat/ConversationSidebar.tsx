@@ -1,39 +1,31 @@
 "use client"
 
 import { formatDistanceToNow } from "date-fns"
-import { Folder, FolderOpen, Loader2, Plus, Users } from "lucide-react"
+import { Folder, FolderOpen, Plus, Users } from "lucide-react"
 
-import type { ConversationRow, ProjectRow } from "@/lib/supabase/queries"
+import type { ConversationRow, ProjectRow } from "@/lib/demo/mock-data"
 import { cn } from "@/lib/utils"
 
 interface ConversationSidebarProps {
   projects: ProjectRow[]
   conversations: ConversationRow[]
-  loading: boolean
-  error: string | null
   activeConversationId: string | null
   activeProjectId: string | null
-  loadingConversationId: string | null
   onNewChat: () => void
   onNewProject: () => void
   onOpenProject: (project: ProjectRow) => void
   onOpenConversation: (id: string) => void
-  onRetry: () => void
 }
 
 export function ConversationSidebar({
   projects,
   conversations,
-  loading,
-  error,
   activeConversationId,
   activeProjectId,
-  loadingConversationId,
   onNewChat,
   onNewProject,
   onOpenProject,
   onOpenConversation,
-  onRetry,
 }: ConversationSidebarProps) {
   const projectNameById = new Map(projects.map((p) => [p.id, p.name]))
 
@@ -66,7 +58,7 @@ export function ConversationSidebar({
           </button>
         </div>
 
-        {projects.length === 0 && !loading && (
+        {projects.length === 0 && (
           <button
             onClick={onNewProject}
             className="mx-1 mb-2 w-[calc(100%-0.5rem)] rounded-xl border border-dashed border-ivory/15 px-3 py-2.5 text-left text-xs leading-relaxed text-ivory/40 transition-colors hover:border-sage/40 hover:text-ivory/60"
@@ -111,25 +103,7 @@ export function ConversationSidebar({
           </span>
         </div>
 
-        {loading && conversations.length === 0 && (
-          <div className="flex items-center justify-center py-8">
-            <Loader2 className="h-4 w-4 animate-spin text-ivory/40" />
-          </div>
-        )}
-
-        {error && (
-          <div className="mx-1 rounded-xl bg-red-950/40 px-3 py-3 ring-1 ring-red-400/20">
-            <p className="text-xs leading-relaxed text-red-300/90">{error}</p>
-            <button
-              onClick={onRetry}
-              className="mt-1.5 text-xs font-medium text-sage underline underline-offset-2 hover:text-ivory"
-            >
-              Retry
-            </button>
-          </div>
-        )}
-
-        {!loading && !error && conversations.length === 0 && (
+        {conversations.length === 0 && (
           <p className="px-3 py-3 text-xs text-ivory/35">No conversations yet.</p>
         )}
 
@@ -140,7 +114,6 @@ export function ConversationSidebar({
             <button
               key={conv.id}
               onClick={() => onOpenConversation(conv.id)}
-              disabled={loadingConversationId === conv.id}
               className={cn(
                 "flex w-full flex-col gap-0.5 rounded-lg px-3 py-2 text-left transition-colors",
                 isActive
@@ -152,22 +125,14 @@ export function ConversationSidebar({
                 {conv.title || "Untitled conversation"}
               </span>
               <span className="flex items-center gap-1.5 text-[11px] text-ivory/35">
-                {loadingConversationId === conv.id ? (
-                  <>
-                    <Loader2 className="h-3 w-3 animate-spin" /> Loading…
-                  </>
-                ) : (
-                  <>
-                    {projectName && (
-                      <span className="inline-flex min-w-0 items-center gap-1 text-sage/70">
-                        <Folder className="h-3 w-3 flex-shrink-0" />
-                        <span className="max-w-[7rem] truncate">{projectName}</span>
-                        <span aria-hidden>·</span>
-                      </span>
-                    )}
-                    {formatDistanceToNow(new Date(conv.updated_at), { addSuffix: true })}
-                  </>
+                {projectName && (
+                  <span className="inline-flex min-w-0 items-center gap-1 text-sage/70">
+                    <Folder className="h-3 w-3 flex-shrink-0" />
+                    <span className="max-w-[7rem] truncate">{projectName}</span>
+                    <span aria-hidden>·</span>
+                  </span>
                 )}
+                {formatDistanceToNow(new Date(conv.updated_at), { addSuffix: true })}
               </span>
             </button>
           )
@@ -177,7 +142,7 @@ export function ConversationSidebar({
       {/* Footer */}
       <div className="border-t border-ivory/[0.07] px-5 py-3">
         <p className="text-[10px] tracking-wide text-ivory/30">
-          © {new Date().getFullYear()} Motta Financial · Internal use only
+          © 2026 ALFRED Ai · Demo with fictional data
         </p>
       </div>
     </div>

@@ -1,22 +1,15 @@
 # alfred-chat UI components
 
-## Logo asset
-
-`public/images/alfred-logo.png` is currently a 1×1 transparent placeholder.
-
-Copy the real logo from the Hub repo before deploying:
-
-```bash
-cp ../v0-motta-hub/public/images/alfred-logo.png public/images/alfred-logo.png
-```
-
-Or update the `src` prop in `app/layout.tsx` and `app/login/page.tsx` to point to
-wherever the asset lives in production (CDN URL, etc.).
+Self-contained demo UI. All data is fictional and lives in `lib/demo/mock-data.ts`;
+nothing here talks to a backend or reads environment variables.
 
 ## Components
 
 | File | Purpose |
 |---|---|
-| `AlfredChat.tsx` | Main chat UI. Uses `@ai-sdk/react useChat` with `DefaultChatTransport` to stream from Hub `/api/alfred/chat`. Handles `data-conversation` parts to track the conversation ID. |
-| `ConversationSidebar.tsx` | Lists past conversations fetched from Hub `/api/alfred/conversations`. Clicking a row hydrates useChat with historical messages. |
-| `HealthDot.tsx` | Pings Hub `/api/alfred/health` every 60 s and shows a green/red dot in the header. |
+| `ChatPage.tsx` | Page shell. Holds conversations, projects and messages in React state, seeded from the mock data. |
+| `AlfredChat.tsx` | Chat UI. Replies are scripted (keyword matched) after a short simulated delay. |
+| `ConversationSidebar.tsx` | Lists past and new conversations. Clicking a row loads its pre-written messages. |
+| `ProjectView.tsx` / `ProjectDialog.tsx` | Create, edit and delete projects in local state. Client search covers the mock clients only. |
+| `ModelSelector.tsx` | Static model list; selecting an option changes nothing. |
+| `HealthDot.tsx` | Always shows a green "Connected" indicator. |

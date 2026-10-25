@@ -4,11 +4,7 @@ import { useEffect, useState } from "react"
 import { X } from "lucide-react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
-import {
-  createProject,
-  updateProject,
-  type ProjectRow,
-} from "@/lib/supabase/queries"
+import type { ProjectRow } from "@/lib/demo/mock-data"
 
 interface ProjectDialogProps {
   open: boolean
@@ -23,7 +19,6 @@ export function ProjectDialog({ open, project, onClose, onSaved }: ProjectDialog
   const [description, setDescription] = useState("")
   const [instructions, setInstructions] = useState("")
   const [shared, setShared] = useState(false)
-  const [saving, setSaving] = useState(false)
 
   // Re-seed the form whenever the dialog opens
   useEffect(() => {
@@ -36,30 +31,23 @@ export function ProjectDialog({ open, project, onClose, onSaved }: ProjectDialog
 
   if (!open) return null
 
-  const handleSave = async () => {
+  const handleSave = () => {
     if (!name.trim()) {
       toast.error("Give the project a name.")
       return
     }
-    setSaving(true)
-    try {
-      const input = {
-        name,
-        description,
-        instructions,
-        visibility: (shared ? "team" : "private") as "team" | "private",
-      }
-      const saved = project
-        ? await updateProject(project.id, input)
-        : await createProject(input)
-      onSaved(saved)
-      onClose()
-      toast.success(project ? "Project updated." : "Project created.")
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Could not save the project.")
-    } finally {
-      setSaving(false)
-    }
+    const now = new Date().toISOString()
+    onSaved({
+      id: project?.id ?? crypto.randomUUID(),
+      name: name.trim(),
+      description: description.trim() || null,
+      instructions: instructions.trim() || null,
+      visibility: shared ? "team" : "private",
+      created_at: project?.created_at ?? now,
+      updated_at: now,
+    })
+    onClose()
+    toast.success(project ? "Project updated." : "Project created.")
   }
 
   return (
@@ -156,10 +144,10 @@ export function ProjectDialog({ open, project, onClose, onSaved }: ProjectDialog
           </Button>
           <Button
             onClick={handleSave}
-            disabled={saving || !name.trim()}
+            disabled={!name.trim()}
             className="bg-ink text-ivory hover:bg-moss-deep"
           >
-            {saving ? "Saving…" : project ? "Save changes" : "Create project"}
+            {project ? "Save changes" : "Create project"}
           </Button>
         </div>
       </div>

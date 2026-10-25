@@ -1,147 +1,91 @@
 "use client"
 
-import { useCallback, useEffect, useRef, useState } from "react"
-import { toast } from "sonner"
-import type { UIMessage } from "ai"
+import { useCallback, useRef, useState } from "react"
 
 import { AlfredChat } from "@/components/alfred-chat/AlfredChat"
 import { ConversationSidebar } from "@/components/alfred-chat/ConversationSidebar"
 import { ProjectDialog } from "@/components/alfred-chat/ProjectDialog"
 import { ProjectView } from "@/components/alfred-chat/ProjectView"
-import { useModelCatalog } from "@/components/alfred-chat/ModelSelector"
 import {
-  assignConversationToProject,
-  listMessages,
-  listMyConversations,
-  listMyProjects,
-  subscribeToConversations,
+  MOCK_CONVERSATIONS,
+  MOCK_KNOWLEDGE,
+  MOCK_MESSAGES,
+  MOCK_PROJECTS,
   type ConversationRow,
+  type DemoMessage,
+  type KnowledgeRow,
   type ProjectRow,
-} from "@/lib/supabase/queries"
+} from "@/lib/demo/mock-data"
 
 type View = { kind: "chat" } | { kind: "project" }
 
-export function ChatPage() {
-  // Data
-  const [projects, setProjects] = useState<ProjectRow[]>([])
-  const [conversations, setConversations] = useState<ConversationRow[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+const TITLE_MAX = 48
 
-  // Navigation / chat state
+function titleFrom(text: string) {
+  const clean = text.replace(/\s+/g, " ").trim()
+  return clean.length > TITLE_MAX ? `${clean.slice(0, TITLE_MAX - 1)}…` : clean
+}
+
+export function ChatPage() {
+  // All data lives in React state, seeded from the fictional mock data.
+  const [projects, setProjects] = useState<ProjectRow[]>(MOCK_PROJECTS)
+  const [conversations, setConversations] = useState<ConversationRow[]>(MOCK_CONVERSATIONS)
+  const [threads, setThreads] = useState<Record<string, DemoMessage[]>>(MOCK_MESSAGES)
+  const [knowledge, setKnowledge] = useState<Record<string, KnowledgeRow[]>>(MOCK_KNOWLEDGE)
+
+  // Navigation. A brand-new chat gets a draft id up front; it is added to
+  // the sidebar list once the first message is sent.
+  const draftCounter = useRef(0)
+  const nextDraftId = () => `new-${++draftCounter.current}`
   const [view, setView] = useState<View>({ kind: "chat" })
   const [activeProject, setActiveProject] = useState<ProjectRow | null>(null)
-  const [conversationId, setConversationId] = useState<string | null>(null)
-  const [initialMessages, setInitialMessages] = useState<UIMessage[] | undefined>(undefined)
-  const [loadingConversationId, setLoadingConversationId] = useState<string | null>(null)
-
-  // Chat session token. Bumped on every user-initiated navigation so
-  // AlfredChat remounts with a fresh useChat instance — an in-flight
-  // stream from the previous thread can never bleed into the new one.
-  // (It does NOT change when the Hub's data-conversation event promotes a
-  // new chat to a persisted conversation — that must not interrupt the
-  // live stream.)
-  const [chatKey, setChatKey] = useState(0)
-  const chatKeyRef = useRef(0)
-  useEffect(() => {
-    chatKeyRef.current = chatKey
-  }, [chatKey])
-
-  // Monotonic tokens so stale async resolutions are dropped.
-  const openSeqRef = useRef(0)
-  const refreshSeqRef = useRef(0)
+  const [activeId, setActiveId] = useState<string>(() => nextDraftId())
+  const activeProjectIdRef = useRef<string | null>(null)
+  activeProjectIdRef.current = activeProject?.id ?? null
 
   // Project dialog
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editingProject, setEditingProject] = useState<ProjectRow | null>(null)
 
-  const refreshData = useCallback(async () => {
-    const seq = ++refreshSeqRef.current
-    try {
-      const [projectRows, conversationRows] = await Promise.all([
-        listMyProjects(),
-        listMyConversations(),
-      ])
-      if (seq !== refreshSeqRef.current) return // a newer refresh already landed
-      setProjects(projectRows)
-      setConversations(conversationRows)
-      setError(null)
-    } catch (err) {
-      if (seq !== refreshSeqRef.current) return
-      setError(err instanceof Error ? err.message : "Failed to load data")
-    } finally {
-      if (seq === refreshSeqRef.current) setLoading(false)
-    }
+  const appendMessage = useCallback((id: string, message: DemoMessage) => {
+    const now = new Date().toISOString()
+    setThreads((prev) => ({ ...prev, [id]: [...(prev[id] ?? []), message] }))
+    setConversations((prev) => {
+      const existing = prev.find((c) => c.id === id)
+      if (existing) {
+        return [{ ...existing, updated_at: now }, ...prev.filter((c) => c.id !== id)]
+      }
+      if (message.role !== "user") return prev
+      return [
+        {
+          id,
+          title: titleFrom(message.text),
+          project_id: activeProjectIdRef.current,
+          created_at: now,
+          updated_at: now,
+        },
+        ...prev,
+      ]
+    })
   }, [])
 
-  // Initial load + live updates on conversation changes.
-  useEffect(() => {
-    void refreshData()
-    const unsubscribe = subscribeToConversations(() => void refreshData())
-    return unsubscribe
-  }, [refreshData])
-
-  // Model catalog lives here (not in AlfredChat) so remounting the chat
-  // surface on navigation doesn't refetch the Hub catalog each time.
-  const modelCatalog = useModelCatalog()
-
-  /**
-   * The Hub created a conversation for a chat session. `originKey` and
-   * `originProjectId` were captured when that session's AlfredChat was
-   * mounted, so a late event cannot clobber a conversation the user has
-   * since navigated to, and the chat is always filed under the project it
-   * was actually started in — not whatever is active when the event lands.
-   */
-  const handleConversationId = useCallback(
-    (id: string, originKey: number, originProjectId: string | null) => {
-      if (originKey === chatKeyRef.current) {
-        setConversationId(id)
-      }
-      const link = originProjectId
-        ? assignConversationToProject(id, originProjectId).catch(() => {
-            toast.error("Chat saved, but it could not be filed under the project.")
-          })
-        : Promise.resolve()
-      void link.then(() => refreshData())
-    },
-    [refreshData],
-  )
-
   const openConversation = useCallback(
-    async (id: string) => {
-      if (id === conversationId && view.kind === "chat") return
-      const seq = ++openSeqRef.current
-      setLoadingConversationId(id)
-      try {
-        const messages = await listMessages(id)
-        if (seq !== openSeqRef.current) return // user clicked something newer
-        const conv = conversations.find((c) => c.id === id)
-        const project = conv?.project_id
-          ? (projects.find((p) => p.id === conv.project_id) ?? null)
-          : null
-        setActiveProject(project)
-        setConversationId(id)
-        setInitialMessages(messages)
-        setView({ kind: "chat" })
-        setChatKey((k) => k + 1)
-      } catch (err) {
-        if (seq === openSeqRef.current) {
-          toast.error(err instanceof Error ? err.message : "Failed to load conversation")
-        }
-      } finally {
-        if (seq === openSeqRef.current) setLoadingConversationId(null)
-      }
+    (id: string) => {
+      const conv = conversations.find((c) => c.id === id)
+      const project = conv?.project_id
+        ? (projects.find((p) => p.id === conv.project_id) ?? null)
+        : null
+      setActiveProject(project)
+      setActiveId(id)
+      setView({ kind: "chat" })
     },
-    [conversationId, view.kind, conversations, projects],
+    [conversations, projects],
   )
 
   const startNewChat = useCallback((project: ProjectRow | null) => {
-    openSeqRef.current++ // invalidate any in-flight conversation open
     setActiveProject(project)
-    setConversationId(null)
-    setInitialMessages(undefined)
+    setActiveId(nextDraftId())
     setView({ kind: "chat" })
-    setChatKey((k) => k + 1)
   }, [])
 
   const openProject = useCallback((project: ProjectRow) => {
@@ -155,29 +99,36 @@ export function ChatPage() {
         const exists = prev.some((p) => p.id === saved.id)
         return exists ? prev.map((p) => (p.id === saved.id ? saved : p)) : [saved, ...prev]
       })
-      setActiveProject((prev) => (prev && prev.id === saved.id ? saved : prev))
-      // A newly created project becomes the active view.
-      if (!editingProject) {
+      if (editingProject) {
+        setActiveProject((prev) => (prev && prev.id === saved.id ? saved : prev))
+      } else {
+        setKnowledge((prev) => ({ ...prev, [saved.id]: [] }))
         setActiveProject(saved)
         setView({ kind: "project" })
       }
-      void refreshData()
     },
-    [editingProject, refreshData],
+    [editingProject],
   )
 
-  const handleProjectDeleted = useCallback(() => {
+  const handleProjectDeleted = useCallback((projectId: string) => {
+    setProjects((prev) => prev.filter((p) => p.id !== projectId))
+    setConversations((prev) =>
+      prev.map((c) => (c.project_id === projectId ? { ...c, project_id: null } : c)),
+    )
+    setKnowledge((prev) => {
+      const { [projectId]: _removed, ...rest } = prev
+      return rest
+    })
     setActiveProject(null)
+    setActiveId(nextDraftId())
     setView({ kind: "chat" })
-    setConversationId(null)
-    setInitialMessages(undefined)
-    setChatKey((k) => k + 1)
-    void refreshData()
-  }, [refreshData])
+  }, [])
 
   const projectConversations = activeProject
     ? conversations.filter((c) => c.project_id === activeProject.id)
     : []
+
+  const activeConversationExists = conversations.some((c) => c.id === activeId)
 
   return (
     <div className="flex h-full">
@@ -186,19 +137,17 @@ export function ChatPage() {
         <ConversationSidebar
           projects={projects}
           conversations={conversations}
-          loading={loading}
-          error={error}
-          activeConversationId={view.kind === "chat" ? conversationId : null}
+          activeConversationId={
+            view.kind === "chat" && activeConversationExists ? activeId : null
+          }
           activeProjectId={activeProject?.id ?? null}
-          loadingConversationId={loadingConversationId}
           onNewChat={() => startNewChat(null)}
           onNewProject={() => {
             setEditingProject(null)
             setDialogOpen(true)
           }}
           onOpenProject={openProject}
-          onOpenConversation={(id) => void openConversation(id)}
-          onRetry={() => void refreshData()}
+          onOpenConversation={openConversation}
         />
       </div>
 
@@ -209,27 +158,26 @@ export function ChatPage() {
             key={activeProject.id}
             project={activeProject}
             conversations={projectConversations}
-            loadingConversationId={loadingConversationId}
+            knowledge={knowledge[activeProject.id] ?? []}
+            onKnowledgeChange={(rows) =>
+              setKnowledge((prev) => ({ ...prev, [activeProject.id]: rows }))
+            }
             onNewChat={() => startNewChat(activeProject)}
-            onOpenConversation={(id) => void openConversation(id)}
+            onOpenConversation={openConversation}
             onEdit={() => {
               setEditingProject(activeProject)
               setDialogOpen(true)
             }}
-            onDeleted={handleProjectDeleted}
+            onDeleted={() => handleProjectDeleted(activeProject.id)}
           />
         ) : (
           <AlfredChat
-            key={chatKey}
-            conversationId={conversationId}
-            projectId={activeProject?.id ?? null}
+            key={activeId}
+            conversationId={activeId}
             projectName={activeProject?.name ?? null}
-            onConversationId={(id) =>
-              handleConversationId(id, chatKey, activeProject?.id ?? null)
-            }
+            messages={threads[activeId] ?? []}
+            onAppend={appendMessage}
             onOpenProject={() => activeProject && openProject(activeProject)}
-            initialMessages={initialMessages}
-            modelCatalog={modelCatalog}
           />
         )}
       </div>

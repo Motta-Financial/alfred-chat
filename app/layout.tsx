@@ -15,8 +15,8 @@ const instrument = Instrument_Sans({ subsets: ["latin"], variable: "--font-instr
 const jbMono = JetBrains_Mono({ subsets: ["latin"], variable: "--font-jbmono" })
 
 export const metadata: Metadata = {
-  title: "ALFRED · Motta",
-  description: "Motta Hub Assistant — AI-powered practice management for Motta Financial.",
+  title: "ALFRED Ai",
+  description: "AI assistant for accounting firms.",
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -42,11 +42,16 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 ALFRED
               </span>
               <span className="hidden text-[11px] uppercase tracking-[0.22em] text-ivory/40 sm:inline">
-                Motta Hub Assistant
+                Your firm&apos;s AI assistant
               </span>
             </div>
           </div>
-          <HealthDot />
+          <div className="flex items-center gap-3">
+            <span className="rounded-full bg-ivory/5 px-2.5 py-1 text-[11px] font-medium tracking-wide text-ivory/60 ring-1 ring-brass/30">
+              Demo · fictional data
+            </span>
+            <HealthDot />
+          </div>
         </header>
 
         {/* Page content */}
