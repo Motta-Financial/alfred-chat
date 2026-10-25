@@ -7,9 +7,14 @@ export const metadata: Metadata = {
 }
 
 const backgrounds = [
-  { caption: "On Cream", bg: "bg-[#F6F4EC] border border-[#171C14]/10", ink: "text-[#171C14]" },
-  { caption: "On Olive", bg: "bg-[#5F6A51]", ink: "text-[#F6F4EC]" },
-  { caption: "On Forest", bg: "bg-[#171C14]", ink: "text-[#F6F4EC]" },
+  {
+    caption: "On Cream",
+    bg: "bg-[#F6F4EC] border border-[#171C14]/10",
+    ink: "text-[#171C14]",
+    accent: undefined,
+  },
+  { caption: "On Olive", bg: "bg-[#5F6A51]", ink: "text-[#F6F4EC]", accent: "text-[#F6F4EC]" },
+  { caption: "On Forest", bg: "bg-[#171C14]", ink: "text-[#F6F4EC]", accent: undefined },
 ]
 
 const swatches = [
@@ -67,9 +72,9 @@ export default function BrandPage() {
             ALFRED Ai Brand Sheet
           </h1>
           <Wordmark className="text-7xl sm:text-8xl" />
-          <p className="font-display text-2xl italic sm:text-3xl">Your firm&apos;s right hand.</p>
+          <p className="font-display text-2xl italic sm:text-3xl">Your firm&rsquo;s right hand.</p>
           <p className="font-sans text-xs uppercase tracking-[0.28em] text-[#8E9B79] sm:text-sm">
-            The AI assistant for CPA firms.
+            The AI assistant for CPA firms
           </p>
         </header>
 
@@ -81,7 +86,7 @@ export default function BrandPage() {
                 <div
                   className={`flex h-40 items-center justify-center rounded-2xl px-4 ${b.bg}`}
                 >
-                  <Wordmark className="text-4xl" inkClassName={b.ink} />
+                  <Wordmark className="text-4xl" inkClassName={b.ink} accentClassName={b.accent} />
                 </div>
                 <figcaption className="text-center font-sans text-sm text-[#8E9B79]">
                   {b.caption}

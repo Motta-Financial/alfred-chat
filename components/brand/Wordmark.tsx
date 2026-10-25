@@ -3,9 +3,14 @@ import { cn } from "@/lib/utils"
 type WordmarkProps = {
   className?: string
   inkClassName?: string
+  accentClassName?: string
 }
 
-export function Wordmark({ className, inkClassName = "text-[#171C14]" }: WordmarkProps) {
+export function Wordmark({
+  className,
+  inkClassName = "text-[#171C14]",
+  accentClassName = "text-[#B49B6C]",
+}: WordmarkProps) {
   return (
     <span
       className={cn(
@@ -15,10 +20,13 @@ export function Wordmark({ className, inkClassName = "text-[#171C14]" }: Wordmar
       )}
     >
       <span className="font-semibold tracking-[0.02em]">ALFRED</span>
-      <span className="ml-[0.18em] italic font-normal text-[#B49B6C]">Ai</span>
-      <sup className="ml-[0.08em] self-start text-[0.28em] font-normal leading-none opacity-80">
+      <span className={cn("ml-[0.18em] italic font-normal", accentClassName)}>Ai</span>
+      <span
+        aria-hidden="true"
+        className="relative -top-[0.5em] ml-[0.02em] text-[0.28em] font-normal leading-none opacity-80"
+      >
         ™
-      </sup>
+      </span>
     </span>
   )
 }
