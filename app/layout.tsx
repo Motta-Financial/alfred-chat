@@ -15,8 +15,9 @@ const instrument = Instrument_Sans({ subsets: ["latin"], variable: "--font-instr
 const jbMono = JetBrains_Mono({ subsets: ["latin"], variable: "--font-jbmono" })
 
 export const metadata: Metadata = {
-  title: "ALFRED Ai",
-  description: "AI assistant for accounting firms.",
+  title: "ALFRED Ai — Your firm's right hand",
+  description:
+    "ALFRED Ai is the AI assistant for CPA firms. Ask about any client, return, or open work and get answers from your firm's live data.",
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -42,7 +43,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 ALFRED
               </span>
               <span className="hidden text-[11px] uppercase tracking-[0.22em] text-ivory/40 sm:inline">
-                Your firm&apos;s AI assistant
+                The AI assistant for CPA firms
               </span>
             </div>
           </div>

@@ -1,12 +1,12 @@
 "use client"
 
 import { memo, useCallback, useEffect, useRef, useState } from "react"
-import { ArrowUp, Folder, Mail, Scale, Square, UserSearch } from "lucide-react"
+import { ArrowUp, Folder, Square } from "lucide-react"
 import TextareaAutosize from "react-textarea-autosize"
 import { MarkdownMessage } from "@/components/markdown-message"
 import { ModelSelector } from "@/components/alfred-chat/ModelSelector"
 import { DeepThinkToggle, useDeepThink } from "@/components/alfred-chat/DeepThinkToggle"
-import { FIRM_NAME, getScriptedReply, STAFF_USER, SUMMARIZE_CLIENT_PREFILL, type DemoMessage } from "@/lib/demo/mock-data"
+import { FIRM_NAME, getScriptedReply, type DemoMessage } from "@/lib/demo/mock-data"
 import { cn } from "@/lib/utils"
 
 const REPLY_DELAY_MS = 1200
@@ -44,10 +44,11 @@ function Monogram({ size = "md", thinking = false }: { size?: "md" | "lg"; think
   )
 }
 
-const SUGGESTIONS = [
-  { icon: Mail, label: "Draft a client email", prefill: "Draft an email to a client about " },
-  { icon: Scale, label: "Research a tax question", prefill: "Research the tax treatment of " },
-  { icon: UserSearch, label: "Summarize a client", prefill: SUMMARIZE_CLIENT_PREFILL },
+const EXAMPLE_PROMPTS = [
+  "What's the status of the Chen Family's return?",
+  "What's open for Harlow Bakery?",
+  "Summarize my last meeting with Harlow Bakery",
+  "Where does the Ortiz proposal stand?",
 ]
 
 export function AlfredChat({
@@ -88,23 +89,28 @@ export function AlfredChat({
     inputRef.current?.focus()
   }, [])
 
-  const handleSend = useCallback(() => {
-    const text = input.trim()
-    if (!text || pending) return
+  const sendText = useCallback(
+    (raw: string) => {
+      const text = raw.trim()
+      if (!text || pending) return
 
-    setInput("")
-    onAppend(conversationId, { id: crypto.randomUUID(), role: "user", text })
-    setPending(true)
-    timerRef.current = setTimeout(() => {
-      timerRef.current = null
-      onAppendRef.current(conversationId, {
-        id: crypto.randomUUID(),
-        role: "assistant",
-        text: getScriptedReply(text),
-      })
-      if (mountedRef.current) setPending(false)
-    }, REPLY_DELAY_MS)
-  }, [input, pending, conversationId, onAppend])
+      setInput("")
+      onAppend(conversationId, { id: crypto.randomUUID(), role: "user", text })
+      setPending(true)
+      timerRef.current = setTimeout(() => {
+        timerRef.current = null
+        onAppendRef.current(conversationId, {
+          id: crypto.randomUUID(),
+          role: "assistant",
+          text: getScriptedReply(text),
+        })
+        if (mountedRef.current) setPending(false)
+      }, REPLY_DELAY_MS)
+    },
+    [pending, conversationId, onAppend],
+  )
+
+  const handleSend = useCallback(() => sendText(input), [sendText, input])
 
   const handleStop = useCallback(() => {
     if (timerRef.current) clearTimeout(timerRef.current)
@@ -150,25 +156,21 @@ export function AlfredChat({
             <div className="animate-msg-in flex flex-col items-center text-center">
               <Monogram size="lg" />
               <h1 className="mt-6 font-display text-[34px] font-light leading-tight tracking-tight text-foreground">
-                Hi {STAFF_USER.split(" ")[0]}.
+                Your firm&apos;s right hand.
               </h1>
               <p className="mt-2 max-w-sm text-sm leading-relaxed text-muted-foreground">
                 {projectName
                   ? `Start a conversation in ${projectName} — its instructions and knowledge apply.`
-                  : `I'm connected to ${FIRM_NAME}'s systems. Ask me about any client, return, or open work.`}
+                  : `Ask me about any client, tax return, or open work. I'm connected to all of ${FIRM_NAME}'s systems.`}
               </p>
               <div className="mt-8 flex flex-wrap items-center justify-center gap-2">
-                {SUGGESTIONS.map(({ icon: Icon, label, prefill }) => (
+                {EXAMPLE_PROMPTS.map((prompt) => (
                   <button
-                    key={label}
-                    onClick={() => {
-                      setInput(prefill)
-                      inputRef.current?.focus()
-                    }}
-                    className="flex items-center gap-2 rounded-full border border-line bg-paper-2 px-3.5 py-2 text-xs font-medium text-foreground/70 transition-all hover:border-sage/60 hover:text-foreground hover:shadow-console"
+                    key={prompt}
+                    onClick={() => sendText(prompt)}
+                    className="rounded-full border border-line bg-paper-2 px-3.5 py-2 text-xs font-medium text-foreground/70 transition-all hover:border-sage/60 hover:text-foreground hover:shadow-console"
                   >
-                    <Icon className="h-3.5 w-3.5 text-moss" />
-                    {label}
+                    {prompt}
                   </button>
                 ))}
               </div>
