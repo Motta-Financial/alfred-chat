@@ -6,7 +6,7 @@ import TextareaAutosize from "react-textarea-autosize"
 import { MarkdownMessage } from "@/components/markdown-message"
 import { ModelSelector } from "@/components/alfred-chat/ModelSelector"
 import { DeepThinkToggle, useDeepThink } from "@/components/alfred-chat/DeepThinkToggle"
-import { FIRM_NAME, getScriptedReply, type DemoMessage } from "@/lib/demo/mock-data"
+import { DEMO_QUESTIONS, FIRM_NAME, getScriptedReply, type DemoMessage } from "@/lib/demo/mock-data"
 import { cn } from "@/lib/utils"
 
 const REPLY_DELAY_MS = 1200
@@ -44,12 +44,7 @@ function Monogram({ size = "md", thinking = false }: { size?: "md" | "lg"; think
   )
 }
 
-const EXAMPLE_PROMPTS = [
-  "What's the status of the Chen Family's return?",
-  "What's open for Harlow Bakery?",
-  "Summarize my last meeting with Harlow Bakery",
-  "Where does the Ortiz proposal stand?",
-]
+const EXAMPLE_PROMPTS = DEMO_QUESTIONS
 
 export function AlfredChat({
   conversationId,

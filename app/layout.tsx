@@ -5,6 +5,7 @@ import { Toaster } from "sonner"
 import "./globals.css"
 import { HealthDot } from "@/components/alfred-chat/HealthDot"
 import { LogoImage } from "@/components/alfred-chat/LogoImage"
+import { FIRM_NAME, STAFF_USER } from "@/lib/demo/mock-data"
 
 const fraunces = Fraunces({
   subsets: ["latin"],
@@ -52,6 +53,18 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               Demo · fictional data
             </span>
             <HealthDot />
+            <div className="flex items-center gap-2.5 border-l border-ivory/10 pl-3">
+              <span
+                aria-hidden
+                className="flex h-8 w-8 items-center justify-center rounded-full bg-moss font-display text-[12px] text-ivory ring-1 ring-brass/40"
+              >
+                JE
+              </span>
+              <span className="hidden text-[12px] leading-tight text-ivory/80 md:block">
+                <span className="block font-medium">{STAFF_USER}</span>
+                <span className="block text-[11px] text-ivory/45">{FIRM_NAME}</span>
+              </span>
+            </div>
           </div>
         </header>
 

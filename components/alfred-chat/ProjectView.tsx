@@ -345,7 +345,7 @@ function AttachClientKnowledge({
         <input
           value={term}
           onChange={(e) => setTerm(e.target.value)}
-          placeholder="Search clients & contacts (try Chen or Harlow)…"
+          placeholder="Search clients & contacts (try Hartwell or Lakeside)…"
           autoFocus
           className="w-full rounded-lg border border-line bg-paper-2 py-2 pl-9 pr-8 text-sm outline-none focus:border-sage focus:ring-2 focus:ring-sage/20"
         />

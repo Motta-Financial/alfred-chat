@@ -57,41 +57,41 @@ export interface MockClient {
 
 export const MOCK_CLIENTS: MockClient[] = [
   {
-    id: "client-chen",
+    id: "client-hartwell",
     kind: "contact",
-    name: "Chen Family",
+    name: "Hartwell Family",
     detail: "Household · Individual returns",
     summary:
-      "Married filing jointly, two dependents. W-2 income from both spouses plus brokerage interest and dividends. 2025 return is in review with Sam Patel.",
+      "Married filing jointly, two dependents. 2025 return was filed on extension and accepted by the IRS and the state ahead of the Oct 15 deadline.",
   },
   {
-    id: "client-harlow",
+    id: "client-lakeside",
     kind: "organization",
-    name: "Harlow Bakery LLC",
+    name: "Lakeside Bakery",
     detail: "Retail bakery · S corporation",
     summary:
-      "S corporation with 9 employees. Monthly bookkeeping, quarterly payroll review and annual business return. Owner: Dana Harlow.",
+      "S corporation with 9 employees. Monthly bookkeeping, quarterly sales tax filings and annual business return. Three open items as of late October.",
   },
   {
-    id: "client-ortiz",
+    id: "client-rivera",
     kind: "organization",
-    name: "Ortiz & Partners Design",
+    name: "Rivera Dental",
+    detail: "Dental practice · Advisory client",
+    summary:
+      "Single-location dental practice led by Dr. Elena Rivera. Exploring a second office in 2027 and a year-end equipment purchase.",
+  },
+  {
+    id: "client-northgate",
+    kind: "organization",
+    name: "Northgate Design Studio",
     detail: "Design studio · Prospect",
     summary:
       "Three-partner design studio evaluating a bookkeeping and advisory engagement. Proposal sent Oct 2 and not yet signed.",
   },
   {
-    id: "client-maple",
-    kind: "organization",
-    name: "Maple Street Dental PC",
-    detail: "Dental practice · New client",
-    summary:
-      "Single-location dental practice onboarding in October. Needs prior-year returns, payroll access and a chart of accounts review.",
-  },
-  {
-    id: "client-priya",
+    id: "client-okafor",
     kind: "contact",
-    name: "Priya Nair",
+    name: "Samuel Okafor",
     detail: "Individual · Self-employed consultant",
     summary:
       "Independent consultant with 1099 income and quarterly estimated payments. Home office deduction under review.",
@@ -117,59 +117,45 @@ export function buildClientKnowledge(client: MockClient): { title: string; conte
 /* Scripted replies                                                    */
 /* ------------------------------------------------------------------ */
 
-const CHEN_REPLY = `The Chen Family's 2025 return is **in review**. Still missing: 1099-INT and 1098-T. Reviewer: Sam Patel. Due: April 15.
+export const DEMO_QUESTIONS = [
+  "Where does the Hartwell family's 2025 tax return stand?",
+  "What work is still open for Lakeside Bakery?",
+  "What did we discuss with Rivera Dental in last week's meeting?",
+] as const
 
-| Document | Status |
-| --- | --- |
-| W-2 (Wei Chen) | Received |
-| W-2 (Lily Chen) | Received |
-| 1099-DIV | Received |
-| 1098 Mortgage interest | Received |
-| 1099-INT | Missing |
-| 1098-T | Missing |`
+const HARTWELL_REPLY = `The Hartwell family's 2025 individual return was **e-filed and accepted**.
 
-const OPEN_WORK_REPLY = `Here is the open work for **Harlow Bakery LLC**:
+- **Federal:** accepted by the IRS on Oct 13, 2026
+- **State:** accepted on Oct 14, 2026
+- **Filing:** filed on extension, ahead of the Oct 15 deadline
+- **Team:** Preparer: Jordan Ellis · Reviewer: Priya Nair
 
-| Work item | Status | Owner | Due |
-| --- | --- | --- | --- |
-| Monthly bookkeeping (Oct) | In progress | Maya Reyes | Nov 10 |
-| Q3 payroll review | In review | Sam Patel | Oct 31 |
-| 2025 business return | Not started | Jordan Ellis | Mar 16 |`
+Nothing else is outstanding on this return.`
 
-const MEETING_REPLY = `From your Oct 14 meeting with Harlow Bakery:
+const LAKESIDE_REPLY = `Lakeside Bakery has **3 open items**:
 
-- Dana plans to add a second location in the spring and wants to model the cash impact first.
-- Weekend overtime ran about 18% above budget in Q3, which is driving the payroll review.
-- They are open to moving from monthly to weekly bookkeeping during the holiday rush.
+- **Q3 2026 sales tax filing:** In progress, due Oct 31 · Assigned to Maya Chen
+- **October bookkeeping:** Not started, due Nov 15 · Assigned to Maya Chen
+- **2027 tax planning meeting:** Scheduled for Nov 6 · With Priya Nair
 
-**Next steps**
+The sales tax filing is the most time-sensitive.`
 
-1. Send Dana a cash-flow scenario for the second location.
-2. Share the Q3 payroll review findings by Oct 31.`
+const RIVERA_REPLY = `From the **Oct 20, 2026 Zoom meeting** with Dr. Elena Rivera (30 minutes):
 
-const PROPOSAL_REPLY = `The proposal to **Ortiz & Partners Design** was sent on Oct 2. They have viewed it twice (Oct 3 and Oct 9) but it is **not yet signed**.
+- Plans to open a second office location in 2027
+- Questions about whether to change the business's entity structure before expanding
+- Timing of a new equipment purchase before year-end
+
+**Action items:**
+
+- Priya Nair to send a 2027 cash flow projection by Nov 3
+- Dr. Rivera to send the equipment quote`
+
+const NORTHGATE_REPLY = `The proposal to **Northgate Design Studio** was sent on Oct 2. They have viewed it twice (Oct 3 and Oct 9) but it is **not yet signed**.
 
 **Suggested follow-up:** send a short note this week offering a 15-minute call to walk through the bookkeeping scope. The last view was on the pricing page, so lead with the fixed monthly fee.`
 
-const FALLBACK_REPLY = `I'm happy to help. Since this is a demo with fictional data, here are a few things you can ask me:
-
-- "What's the status of the Chen Family return?"
-- "What open work do we have for Harlow Bakery?"
-- "Summarize my last meeting with Harlow Bakery"
-- "Where is the Ortiz proposal?"`
-
-const MAPLE_REPLY = `**Maple Street Dental PC** is a new client in onboarding. The kickoff meeting is Thursday at 11:30 AM.
-
-| Item | Status |
-| --- | --- |
-| Engagement letter | Signed |
-| Prior-year returns | Requested, not yet received |
-| Payroll system access | Pending |
-| Chart of accounts review | Not started |
-
-**Suggested next step:** send a reminder before Thursday asking for the prior-year returns so the kickoff can focus on the chart of accounts.`
-
-const PRIYA_REPLY = `**Priya Nair** is a self-employed consultant with 1099 income and quarterly estimated payments.
+const OKAFOR_REPLY = `**Samuel Okafor** is a self-employed consultant with 1099 income and quarterly estimated payments.
 
 | Item | Status |
 | --- | --- |
@@ -177,16 +163,22 @@ const PRIYA_REPLY = `**Priya Nair** is a self-employed consultant with 1099 inco
 | Home office deduction | Under review |
 | Estimated tax planning meeting | Friday, 9:00 AM |
 
-**Suggested next step:** ask Priya for the Q3 payment confirmation ahead of Friday's planning meeting.`
+**Suggested next step:** ask Samuel for the Q3 payment confirmation ahead of Friday's planning meeting.`
 
-type ClientKey = "ortiz" | "harlow" | "chen" | "maple" | "priya"
+const FALLBACK_REPLY = `I'm happy to help. Since this is a demo with fictional data, here are a few things you can ask me:
+
+- "Where does the Hartwell family's 2025 tax return stand?"
+- "What work is still open for Lakeside Bakery?"
+- "What did we discuss with Rivera Dental in last week's meeting?"`
+
+type ClientKey = "hartwell" | "lakeside" | "rivera" | "northgate" | "okafor"
 
 const CLIENT_PATTERNS: Array<[ClientKey, RegExp]> = [
-  ["ortiz", /\bortiz\b/],
-  ["harlow", /\bharlow\b/],
-  ["chen", /\bchen\b/],
-  ["maple", /\bmaple\b/],
-  ["priya", /\bpriya\b/],
+  ["northgate", /\bnorthgate\b/],
+  ["lakeside", /\blakeside\b/],
+  ["hartwell", /\bhartwell\b/],
+  ["rivera", /\brivera\b/],
+  ["okafor", /\bokafor\b/],
 ]
 
 function findClient(text: string): ClientKey | null {
@@ -196,58 +188,40 @@ function findClient(text: string): ClientKey | null {
   return null
 }
 
-function wantsMeetingSummary(text: string): boolean {
-  return text.includes("meeting") || text.includes("summar")
-}
-
-function replyForClient(client: ClientKey, text: string): string {
+function replyForClient(client: ClientKey): string {
   switch (client) {
-    case "ortiz":
-      return PROPOSAL_REPLY
-    case "harlow":
-      return wantsMeetingSummary(text) ? MEETING_REPLY : OPEN_WORK_REPLY
-    case "chen":
-      return CHEN_REPLY
-    case "maple":
-      return MAPLE_REPLY
-    case "priya":
-      return PRIYA_REPLY
+    case "hartwell":
+      return HARTWELL_REPLY
+    case "lakeside":
+      return LAKESIDE_REPLY
+    case "rivera":
+      return RIVERA_REPLY
+    case "northgate":
+      return NORTHGATE_REPLY
+    case "okafor":
+      return OKAFOR_REPLY
   }
 }
 
-/** Text the "Summarize a client" quick action pre-fills into the input. */
-export const SUMMARIZE_CLIENT_PREFILL = "Give me a status summary for "
+const normalize = (text: string) =>
+  text
+    .toLowerCase()
+    .replace(/[\u2018\u2019]/g, "'")
+    .replace(/\s+/g, " ")
+    .trim()
 
-function replyForQuickAction(message: string): string | null {
-  const trimmed = message.trim()
-  if (!trimmed.toLowerCase().startsWith(SUMMARIZE_CLIENT_PREFILL.trim().toLowerCase())) return null
-
-  const name = trimmed.slice(SUMMARIZE_CLIENT_PREFILL.trim().length).trim().replace(/[?.!]+$/, "")
-  if (!name) return "Which client would you like a status summary for? For example, the Chen Family or Harlow Bakery."
-
-  const client = findClient(name.toLowerCase())
-  if (client === "harlow") return OPEN_WORK_REPLY
-  if (client) return replyForClient(client, "")
-  return `I don't have **${name}** in this demo's data. Try one of: Chen Family, Harlow Bakery LLC, Ortiz & Partners Design, Maple Street Dental PC or Priya Nair.`
-}
-
-/**
- * Pick a scripted answer. Client names win over generic keywords, so
- * "status of Harlow" is answered about Harlow, not about the Chen Family.
- */
+/** Exact demo questions get their scripted answers; anything else matches on client name. */
 export function getScriptedReply(message: string): string {
-  const quickAction = replyForQuickAction(message)
-  if (quickAction) return quickAction
+  const text = normalize(message)
 
-  const text = message.toLowerCase()
+  const exact = DEMO_QUESTIONS.findIndex((q) => normalize(q) === text)
+  if (exact === 0) return HARTWELL_REPLY
+  if (exact === 1) return LAKESIDE_REPLY
+  if (exact === 2) return RIVERA_REPLY
 
   const client = findClient(text)
-  if (client) return replyForClient(client, text)
+  if (client) return replyForClient(client)
 
-  if (text.includes("proposal")) return PROPOSAL_REPLY
-  if (wantsMeetingSummary(text)) return MEETING_REPLY
-  if (text.includes("status")) return CHEN_REPLY
-  if (text.includes("open")) return OPEN_WORK_REPLY
   return FALLBACK_REPLY
 }
 
@@ -283,10 +257,10 @@ export const MOCK_PROJECTS: ProjectRow[] = [
 ]
 
 export const MOCK_KNOWLEDGE: Record<string, KnowledgeRow[]> = {
-  "project-tax-season": ["client-chen", "client-harlow", "client-priya"].map((id) =>
+  "project-tax-season": ["client-hartwell", "client-lakeside", "client-okafor"].map((id) =>
     clientKnowledgeRow("project-tax-season", id),
   ),
-  "project-onboarding": ["client-ortiz", "client-maple"].map((id) =>
+  "project-onboarding": ["client-northgate", "client-rivera"].map((id) =>
     clientKnowledgeRow("project-onboarding", id),
   ),
 }
@@ -310,18 +284,11 @@ function clientKnowledgeRow(projectId: string, clientId: string): KnowledgeRow {
 
 export const MOCK_CONVERSATIONS: ConversationRow[] = [
   {
-    id: "conv-chen",
-    title: "Return status – Chen Family",
-    project_id: "project-tax-season",
-    created_at: ago(2 * HOUR),
-    updated_at: ago(2 * HOUR),
-  },
-  {
-    id: "conv-harlow",
-    title: "Open work for Harlow Bakery",
-    project_id: "project-tax-season",
-    created_at: ago(5 * HOUR),
-    updated_at: ago(5 * HOUR),
+    id: "conv-northgate",
+    title: "Northgate proposal status",
+    project_id: "project-onboarding",
+    created_at: ago(3 * HOUR),
+    updated_at: ago(3 * HOUR),
   },
   {
     id: "conv-meetings",
@@ -338,49 +305,31 @@ export const MOCK_CONVERSATIONS: ConversationRow[] = [
     updated_at: ago(2 * DAY),
   },
   {
-    id: "conv-ortiz",
-    title: "Ortiz proposal status",
-    project_id: "project-onboarding",
+    id: "conv-okafor",
+    title: "Okafor estimated payments",
+    project_id: "project-tax-season",
     created_at: ago(4 * DAY),
     updated_at: ago(4 * DAY),
-  },
-  {
-    id: "conv-payroll",
-    title: "Q3 payroll review",
-    project_id: null,
-    created_at: ago(6 * DAY),
-    updated_at: ago(6 * DAY),
   },
 ]
 
 export const MOCK_MESSAGES: Record<string, DemoMessage[]> = {
-  "conv-chen": [
-    { id: "chen-1", role: "user", text: "What's the status of the Chen Family's 2025 return?" },
-    { id: "chen-2", role: "assistant", text: CHEN_REPLY },
-    { id: "chen-3", role: "user", text: "Can you remind me who is reviewing it?" },
-    {
-      id: "chen-4",
-      role: "assistant",
-      text: "Sam Patel is the reviewer. The return is due April 15, and it can move to e-file approval as soon as the 1099-INT and 1098-T arrive.",
-    },
-  ],
-  "conv-harlow": [
-    { id: "harlow-1", role: "user", text: "What open work do we have for Harlow Bakery?" },
-    { id: "harlow-2", role: "assistant", text: OPEN_WORK_REPLY },
+  "conv-northgate": [
+    { id: "ng-1", role: "user", text: "Where are we with the Northgate proposal?" },
+    { id: "ng-2", role: "assistant", text: NORTHGATE_REPLY },
   ],
   "conv-meetings": [
     { id: "meet-1", role: "user", text: "What meetings do I have this week?" },
     {
       id: "meet-2",
       role: "assistant",
-      text: `You have four meetings this week:
+      text: `You have three meetings this week:
 
 | Day | Time | Client | Topic |
 | --- | --- | --- | --- |
-| Mon | 10:00 AM | Harlow Bakery LLC | Q3 payroll walkthrough |
-| Tue | 2:00 PM | Chen Family | Missing document check-in |
-| Thu | 11:30 AM | Maple Street Dental PC | Onboarding kickoff |
-| Fri | 9:00 AM | Priya Nair | Estimated tax planning |`,
+| Tue | 2:00 PM | Lakeside Bakery | Sales tax filing check-in |
+| Thu | 11:30 AM | Northgate Design Studio | Proposal walkthrough |
+| Fri | 9:00 AM | Samuel Okafor | Estimated tax planning |`,
     },
   ],
   "conv-missing-docs": [
@@ -392,34 +341,19 @@ export const MOCK_MESSAGES: Record<string, DemoMessage[]> = {
     {
       id: "docs-2",
       role: "assistant",
-      text: `Two clients have outstanding documents:
+      text: `One client has outstanding documents:
 
 | Client | Missing | Requested |
 | --- | --- | --- |
-| Chen Family | 1099-INT, 1098-T | Oct 6 |
-| Priya Nair | Q3 estimated payment confirmation | Oct 12 |
+| Samuel Okafor | Q3 estimated payment confirmation | Oct 12 |
 
 Here is a draft you can adapt:
 
-> Hi, a quick reminder that we are still waiting on the items listed below so we can keep your return moving. You can upload them in the portal or reply to this email. Thank you!`,
+> Hi, a quick reminder that we are still waiting on the item listed above so we can keep your planning on track. You can upload it in the portal or reply to this email. Thank you!`,
     },
   ],
-  "conv-ortiz": [
-    { id: "ortiz-1", role: "user", text: "Where are we with the Ortiz proposal?" },
-    { id: "ortiz-2", role: "assistant", text: PROPOSAL_REPLY },
-  ],
-  "conv-payroll": [
-    { id: "pay-1", role: "user", text: "Give me a summary of the Q3 payroll review." },
-    {
-      id: "pay-2",
-      role: "assistant",
-      text: `The Q3 payroll review for **Harlow Bakery LLC** is in review with Sam Patel.
-
-- Gross wages: $214,300 across 9 employees.
-- Weekend overtime ran about 18% above budget.
-- Two payroll tax deposits were made one day late; no penalties have been assessed.
-
-I recommend sending Dana a short note on overtime before the Oct 31 deadline.`,
-    },
+  "conv-okafor": [
+    { id: "ok-1", role: "user", text: "Give me a summary for Samuel Okafor." },
+    { id: "ok-2", role: "assistant", text: OKAFOR_REPLY },
   ],
 }
