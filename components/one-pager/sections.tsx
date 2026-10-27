@@ -13,6 +13,12 @@ const EXAMPLE_QUESTIONS = [
   "What did we discuss with Rivera Dental in last week's meeting?",
 ]
 
+const TOOL_CATEGORIES = [
+  { label: "Practice management", detail: "Platforms like Karbon" },
+  { label: "Meetings", detail: "Platforms like Zoom" },
+  { label: "Tax preparation", detail: "Through the provider's official integration" },
+]
+
 function SectionHeading({ children }: { children: React.ReactNode }) {
   return (
     <div className="mb-[7pt]">
@@ -136,9 +142,21 @@ export function ToolsSection() {
       <SectionHeading>
         <span id="tools-heading">Connects to the tools firms already use</span>
       </SectionHeading>
-      <p className="text-[10pt] leading-[1.55] text-ink">
-        Works with tools like Karbon and Zoom, and connects to a firm&apos;s tax preparation
-        software through the provider&apos;s official integration.
+      <ul className="flex flex-col divide-y divide-brass sm:flex-row sm:divide-x sm:divide-y-0">
+        {TOOL_CATEGORIES.map((tool) => (
+          <li
+            key={tool.label}
+            className="flex-1 py-[6pt] first:pt-0 last:pb-0 sm:px-[12pt] sm:py-0 sm:first:pl-0 sm:last:pr-0"
+          >
+            <p className="text-[10pt] leading-snug font-semibold text-ink">{tool.label}</p>
+            <p className="mt-[2pt] text-[9.5pt] leading-[1.4] font-normal text-ink">
+              {tool.detail}
+            </p>
+          </li>
+        ))}
+      </ul>
+      <p className="mt-[8pt] text-[8.5pt] leading-snug text-sage">
+        Every firm uses different tools. ALFRED Ai connects to the ones each firm already has.
       </p>
     </section>
   )
