@@ -34,20 +34,20 @@ function SectionHeading({ children }: { children: React.ReactNode }) {
 
 export function OnePagerHeader() {
   return (
-    <header className="bg-moss px-[0.75in] pt-[0.45in] pb-[0.32in] text-paper">
-      <div className="flex items-center justify-between gap-[24pt]">
-        <div>
-          <h1 className="font-display text-[42pt] leading-none font-medium tracking-tight">
-            ALFRED Ai
-          </h1>
-          <p className="mt-[8pt] text-[13pt] leading-snug tracking-wide text-paper/90">
-            The AI assistant for CPA firms
-          </p>
-          <div className="mt-[14pt] h-[1.5pt] w-[1.1in] bg-brass" />
-        </div>
+    <header className="flex items-stretch bg-moss text-paper">
+      <div className="flex-1 pt-[0.45in] pb-[0.32in] pl-[0.75in]">
+        <h1 className="font-display text-[42pt] leading-none font-medium tracking-tight">
+          ALFRED Ai
+        </h1>
+        <p className="mt-[8pt] text-[13pt] leading-snug tracking-wide text-paper/90">
+          The AI assistant for CPA firms
+        </p>
+        <div className="mt-[14pt] h-[1.5pt] w-[1.1in] bg-brass" />
+      </div>
+      <div className="flex w-[2.1in] shrink-0 items-center justify-center bg-paper py-[0.2in]">
         <Image
-          src="/images/alfred-icon-light.png"
-          alt=""
+          src="/images/alfred-icon.png"
+          alt="ALFRED Ai butler icon"
           width={208}
           height={253}
           priority
