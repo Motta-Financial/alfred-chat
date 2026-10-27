@@ -60,12 +60,12 @@ export function CoverPage() {
       </div>
       <div className="flex w-[3.3in] shrink-0 items-center justify-center bg-paper">
         <Image
-          src="/images/alfred-icon.png"
-          alt="ALFRED Ai butler icon"
-          width={208}
-          height={253}
+          src="/images/alfred-logo-supplied.png"
+          alt="ALFRED Ai logo with butler and olive sphere"
+          width={225}
+          height={276}
           priority
-          className="h-auto w-[1.32in]"
+          className="h-auto w-[2.45in]"
         />
       </div>
     </section>
