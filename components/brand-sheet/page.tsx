@@ -67,7 +67,7 @@ export function BrandSheet() {
           <div className="mt-[14pt] border-t border-ink/15 pt-[9pt]"><p className="font-mono text-[6.5pt] uppercase tracking-[0.16em] text-sage">Fraunces — headings</p><p className="mt-[5pt] font-display text-[18pt] leading-tight">Your firm&apos;s right hand.</p></div>
           <div className="mt-[15pt] border-t border-ink/15 pt-[9pt]"><p className="font-mono text-[6.5pt] uppercase tracking-[0.16em] text-sage">Instrument Sans — body</p><p className="mt-[5pt] text-[10pt] leading-relaxed">Ask a question in plain English and get an answer from your firm&apos;s live data.</p></div>
         </div>
-        <div className="self-end border-l border-brass pl-[0.24in]"><p className="font-mono text-[6.5pt] uppercase tracking-[0.16em] text-sage">JetBrains Mono — data</p><p className="mt-[7pt] font-mono text-[10pt] leading-relaxed">Open returns: 42<br />Due this week: 7</p><div className="mt-[0.36in] border-t border-ink/15 pt-[8pt] text-[7pt] leading-relaxed text-sage">ALFRED Ai™ — Brand Identity Sheet<br />© 2026 Samprina Zekio. All rights reserved.</div></div>
+        <div className="self-end border-l border-brass pl-[0.24in]"><p className="font-mono text-[6.5pt] uppercase tracking-[0.16em] text-sage">JetBrains Mono — data</p><p className="mt-[7pt] font-mono text-[10pt] leading-relaxed">Open returns: 42<br />Due this week: 7</p><div className="mt-[0.36in] border-t border-ink/15 pt-[8pt] text-[7pt] leading-relaxed text-sage">ALFRED Ai™ — Brand Identity Sheet</div></div>
       </section>
     </main>
   )
