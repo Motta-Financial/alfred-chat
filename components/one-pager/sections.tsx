@@ -21,7 +21,7 @@ const TOOL_CATEGORIES = [
   { label: "Tax preparation", detail: "Through the provider's official integration" },
 ]
 
-function SectionHeading({ children }: { children: React.ReactNode }) {
+export function SectionHeading({ children }: { children: React.ReactNode }) {
   return (
     <div className="mb-[7pt]">
       <h2 className="font-display text-[17pt] leading-none font-medium tracking-tight text-moss">
@@ -32,7 +32,11 @@ function SectionHeading({ children }: { children: React.ReactNode }) {
   )
 }
 
-export function OnePagerHeader() {
+export function OnePagerHeader({
+  subtitle = "The AI assistant for CPA firms",
+}: {
+  subtitle?: string
+}) {
   return (
     <header className="flex items-stretch bg-moss text-paper">
       <div className="flex-1 pt-[0.45in] pb-[0.32in] pl-[0.75in]">
@@ -40,7 +44,7 @@ export function OnePagerHeader() {
           ALFRED Ai
         </h1>
         <p className="mt-[8pt] text-[13pt] leading-snug tracking-wide text-paper/90">
-          The AI assistant for CPA firms
+          {subtitle}
         </p>
         <div className="mt-[14pt] h-[1.5pt] w-[1.1in] bg-brass" />
       </div>
