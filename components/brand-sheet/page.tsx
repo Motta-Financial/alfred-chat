@@ -60,7 +60,7 @@ export function BrandSheet() {
         </div>
       </section>
 
-      <section className="mt-auto grid grid-cols-[1.1fr_1fr] gap-[0.42in] px-[0.62in] pb-[0.3in] pt-[0.36in]">
+      <section className="grid grid-cols-[1.1fr_1fr] gap-[0.42in] px-[0.62in] pb-[0.3in] pt-[0.42in]">
         <div>
           <p className="font-mono text-[7pt] uppercase tracking-[0.22em] text-brass">03 / Type</p>
           <h2 className="mt-[4pt] font-display text-[18pt] leading-none">Typography</h2>
