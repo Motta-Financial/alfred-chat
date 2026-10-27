@@ -35,14 +35,18 @@ export default function MarketOpportunityPage() {
       <div className="one-pager-stage min-h-screen overflow-x-auto bg-line px-4 py-8">
         <main className="one-pager-sheet mx-auto flex h-[11in] w-[8.5in] flex-col overflow-hidden bg-paper shadow-xl">
           <OnePagerHeader subtitle="Market Opportunity" />
-          <div className="flex flex-1 flex-col justify-between gap-[6pt] px-[0.75in] pt-[0.22in] pb-[0.22in]">
+          <div className="flex flex-1 flex-col gap-[11pt] px-[0.75in] pt-[0.22in] pb-[0.22in]">
             <StatsSection />
-            <WhoSection />
-            <WhyNowSection />
+            <div className="grid grid-cols-2 gap-[28pt]">
+              <WhoSection />
+              <WhyNowSection />
+            </div>
             <IllustrationSection />
             <OpportunitySection />
-            <SourcesSection />
-            <MarketFooter />
+            <div className="mt-auto flex flex-col gap-[8pt]">
+              <SourcesSection />
+              <MarketFooter />
+            </div>
           </div>
         </main>
       </div>
