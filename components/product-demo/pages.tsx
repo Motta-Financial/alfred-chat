@@ -38,7 +38,7 @@ export function CoverPage() {
       <div className="flex flex-1 flex-col justify-between py-[0.7in] pr-[0.6in] pl-[0.9in]">
         <div className="flex flex-1 flex-col justify-center">
           <h1 className="font-display text-[60pt] leading-none font-medium tracking-tight">
-            ALFRED Ai
+            ALFRED Ai<span className="align-super ml-[2pt] text-[9pt] font-sans font-semibold tracking-normal">™</span>
           </h1>
           <p className="mt-[14pt] font-display text-[26pt] leading-tight font-normal text-paper">
             Product demo
