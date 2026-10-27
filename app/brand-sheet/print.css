@@ -1,0 +1,7 @@
+@page { size: letter; margin: 0; }
+
+@media print {
+  html, body { background: #F6F4EC !important; }
+  .brand-sheet-stage { padding: 0 !important; }
+  .brand-sheet { width: 8.5in !important; min-height: 11in !important; }
+}
